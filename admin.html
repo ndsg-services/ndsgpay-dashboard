@@ -151,7 +151,7 @@
       <div class="kpi"><div class="kpi-label">Marchands actifs</div><div class="kpi-value" id="kpi-active">—</div><div class="kpi-sub">En production</div></div>
       <div class="kpi"><div class="kpi-label">En attente</div><div class="kpi-value" id="kpi-pending">—</div><div class="kpi-sub">À valider</div></div>
       <div class="kpi"><div class="kpi-label">Volume total traité</div><div class="kpi-value" id="kpi-volume">—</div><div class="kpi-sub">XAF</div></div>
-      <div class="kpi" style="border:1.5px solid var(--blue);background:var(--blue-light)"><div class="kpi-label" style="color:var(--blue)">Frais collectés</div><div class="kpi-value" id="kpi-fees" style="color:var(--blue)">—</div><div class="kpi-sub">Revenus NDSGPay</div></div>
+      <div class="kpi" style="border:1.5px solid var(--blue);background:var(--blue-light)"><div class="kpi-label" style="color:var(--blue)">Marge nette NDSGPay</div><div class="kpi-value" id="kpi-fees" style="color:var(--blue)">—</div><div class="kpi-sub" id="kpi-fees-detail">Frais marchands - Coût PawaPay</div></div>
     </div>
 
     <!-- TABS -->
@@ -285,6 +285,7 @@
     document.getElementById('kpi-pending').textContent = s.pendingMerchants;
     document.getElementById('kpi-volume').textContent = formatXAF(s.totalVolume) + ' XAF';
     document.getElementById('kpi-fees').textContent = formatXAF(s.totalFees) + ' XAF';
+    document.getElementById('kpi-fees-detail').textContent = `Collecté ${formatXAF(s.grossFees)} XAF − PawaPay ${formatXAF(s.pawapayFees)} XAF`;
   }
 
   function switchTab(tab) {
