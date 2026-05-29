@@ -421,7 +421,8 @@
         <td class="td-muted">${m._count.deposits + m._count.payouts} tx</td>
         <td class="td-muted">${new Date(m.createdAt).toLocaleDateString('fr-FR')}</td>
         <td>
-          <button class="btn-activate ${m.isActive ? 'deactivate' : 'activate'}" onclick="openModal('${m.id}')">
+          <button class="btn-activate activate" style="background:var(--blue-light);color:var(--blue);border-color:rgba(26,95,180,.2)" onclick="openModal('${m.id}')">Détails</button>
+          <button class="btn-activate ${m.isActive ? 'deactivate' : 'activate'}" onclick="event.stopPropagation();toggleMerchant('${m.id}', ${!m.isActive})">
             ${m.isActive ? 'Désactiver' : 'Activer'}
           </button>
         </td>
