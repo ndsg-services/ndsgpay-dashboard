@@ -183,12 +183,16 @@
       <div class="table-card">
         <div class="table-header">
           <div class="table-title">Toutes les transactions</div>
-          <div class="filters">
+          <div class="filters" style="flex-wrap:wrap;gap:6px">
             <button class="filter-btn active" onclick="filterTx(this,'all','all')">Toutes</button>
             <button class="filter-btn" onclick="filterTx(this,'deposit','all')">Dépôts</button>
             <button class="filter-btn" onclick="filterTx(this,'payout','all')">Payouts</button>
             <button class="filter-btn" onclick="filterTx(this,'all','COMPLETED')">Réussies</button>
             <button class="filter-btn" onclick="filterTx(this,'all','FAILED')">Échouées</button>
+            <select id="merchant-filter" onchange="applyMerchantFilter()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border-strong);background:#fff;font-size:12px;font-family:var(--sans);color:var(--muted);cursor:pointer;outline:none">
+              <option value="all">Tous les marchands</option>
+            </select>
+            <button class="filter-btn" onclick="exportCSV()" style="margin-left:auto;background:var(--blue);color:#fff;border-color:var(--blue)">⬇ Export CSV</button>
           </div>
         </div>
         <div id="tx-table-body">
@@ -235,6 +239,10 @@
   const API = 'https://ndsgpay-backend.vercel.app/api';
   let adminKey = sessionStorage.getItem('ndsgpay_admin_key') || null;
   let allMerchants = [];
+  let allTransactions = [];
+  let currentTxType = 'all';
+  let currentTxStatus = 'all';
+  let currentMerchantFilter = 'all';
   let selectedMerchant = null;
 
   // Init
@@ -409,23 +417,75 @@
   }
 
   async function loadTransactions(type = 'all', status = 'all') {
+    currentTxType = type;
+    currentTxStatus = status;
     document.getElementById('tx-table-body').innerHTML = '<div class="empty"><div class="spinner"></div><br/>Chargement...</div>';
     try {
-      const res = await fetch(`${API}/admin/transactions?type=${type}&status=${status}&limit=100`, {
+      const res = await fetch(`${API}/admin/transactions?type=${type}&status=${status}&limit=500`, {
         headers: { 'x-admin-key': adminKey }
       });
       const data = await res.json();
       if (!data.success) return;
-      renderTransactions(data.transactions);
+      allTransactions = data.transactions;
+
+      // Peupler le select marchands
+      populateMerchantFilter();
+      applyMerchantFilter();
     } catch (err) {
       document.getElementById('tx-table-body').innerHTML = '<div class="empty">Erreur de chargement</div>';
     }
+  }
+
+  function populateMerchantFilter() {
+    const select = document.getElementById('merchant-filter');
+    const current = select.value;
+    const merchants = [...new Set(allTransactions.map(tx => tx.merchant?.name).filter(Boolean))];
+    select.innerHTML = '<option value="all">Tous les marchands</option>' +
+      merchants.map(m => `<option value="${m}" ${m === current ? 'selected' : ''}>${m}</option>`).join('');
+  }
+
+  function applyMerchantFilter() {
+    const filter = document.getElementById('merchant-filter').value;
+    currentMerchantFilter = filter;
+    const filtered = filter === 'all'
+      ? allTransactions
+      : allTransactions.filter(tx => tx.merchant?.name === filter);
+    renderTransactions(filtered);
   }
 
   function filterTx(btn, type, status) {
     document.querySelectorAll('#panel-transactions .filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     loadTransactions(type, status);
+  }
+
+  function exportCSV() {
+    const filter = document.getElementById('merchant-filter').value;
+    const data = filter === 'all' ? allTransactions : allTransactions.filter(tx => tx.merchant?.name === filter);
+
+    if (data.length === 0) { alert('Aucune transaction à exporter'); return; }
+
+    const headers = ['ID', 'Type', 'Marchand', 'Email', 'Opérateur', 'Numéro', 'Montant (XAF)', 'Statut', 'Date'];
+    const rows = data.map(tx => [
+      tx.txId,
+      tx.type === 'deposit' ? 'Dépôt' : 'Payout',
+      tx.merchant?.name || '—',
+      tx.merchant?.email || '—',
+      tx.correspondent,
+      tx.msisdn,
+      tx.amount,
+      tx.status,
+      new Date(tx.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
+    ]);
+
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `NDSGPay_transactions_${filter === 'all' ? 'tous' : filter}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function renderTransactions(txs) {
