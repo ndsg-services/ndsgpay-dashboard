@@ -1313,7 +1313,7 @@
       updateChart(s.chart);
 
       // Soldes multi-devises
-      renderMultiCurrencyBalances(s.balancesByCurrency, s.currencies);
+      renderMultiCurrencyBalances(s.balancesByCurrency, s.currencies, s.balancesByCorrespondent, s.correspondents);
 
     } catch (err) {
       console.error('Stats error:', err);
@@ -1335,7 +1335,7 @@
     return new Intl.NumberFormat('fr-FR').format(Math.round(amount)) + ` ${currency}`;
   }
 
-  function renderMultiCurrencyBalances(balancesByCurrency, currencies) {
+  function renderMultiCurrencyBalances(balancesByCurrency, currencies, balancesByCorrespondent, correspondents) {
     if (!balancesByCurrency || !currencies) return;
 
     // ── KPI "Solde disponible" (overview) ───────────────────
@@ -1355,20 +1355,20 @@
       }
     }
 
-    // ── Table multi-devises dans Analytics ──────────────────
     const analyticsPanel = document.getElementById('panel-analytics');
     if (!analyticsPanel) return;
 
-    let multiBlock = document.getElementById('multi-currency-block');
-    if (!multiBlock) {
-      multiBlock = document.createElement('div');
-      multiBlock.id = 'multi-currency-block';
-      multiBlock.style.cssText = 'margin-bottom:24px';
+    // ── Table par devise ─────────────────────────────────────
+    let currencyBlock = document.getElementById('multi-currency-block');
+    if (!currencyBlock) {
+      currencyBlock = document.createElement('div');
+      currencyBlock.id = 'multi-currency-block';
+      currencyBlock.style.cssText = 'margin-bottom:24px';
       const kpiGrid = analyticsPanel.querySelector('.kpi-grid');
-      if (kpiGrid) kpiGrid.after(multiBlock);
+      if (kpiGrid) kpiGrid.after(currencyBlock);
     }
 
-    multiBlock.innerHTML = `
+    currencyBlock.innerHTML = `
       <div class="chart-card">
         <div class="chart-header">
           <div class="chart-title">Soldes par devise</div>
@@ -1388,6 +1388,44 @@
                 <td style="color:var(--warning)">${formatAmount(b.fees, cur)}</td>
                 <td>${formatAmount(b.withdrawals, cur)}</td>
                 <td style="font-weight:600;color:var(--success)">${formatAmount(b.availableBalance, cur)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+    // ── Table par pays / opérateur ───────────────────────────
+    if (!balancesByCorrespondent || !correspondents || correspondents.length === 0) return;
+
+    let corrBlock = document.getElementById('by-correspondent-block');
+    if (!corrBlock) {
+      corrBlock = document.createElement('div');
+      corrBlock.id = 'by-correspondent-block';
+      corrBlock.style.cssText = 'margin-bottom:24px';
+      currencyBlock.after(corrBlock);
+    }
+
+    corrBlock.innerHTML = `
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Répartition par pays & opérateur</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Pays</th><th>Opérateur</th><th>Devise</th><th>Collecté</th><th>Payout</th><th>Frais</th><th>Solde disponible</th>
+          </tr></thead>
+          <tbody>
+            ${correspondents.map(corr => {
+              const b = balancesByCorrespondent[corr];
+              if (!b) return '';
+              return `<tr>
+                <td>${b.flag} ${b.country}</td>
+                <td class="td-mono" style="font-size:11px">${b.correspondent}</td>
+                <td style="font-weight:500">${b.currency}</td>
+                <td>${formatAmount(b.depositVolume, b.currency)}</td>
+                <td>${formatAmount(b.payoutVolume, b.currency)}</td>
+                <td style="color:var(--warning)">${formatAmount(b.fees, b.currency)}</td>
+                <td style="font-weight:600;color:var(--success)">${formatAmount(b.availableBalance, b.currency)}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -1717,3 +1755,4 @@
 </body>
 </html>
 </html>
+
