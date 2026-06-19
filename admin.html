@@ -159,6 +159,7 @@
       <button class="tab-btn active" id="tab-merchants" onclick="switchTab('merchants')">👥 Marchands</button>
       <button class="tab-btn" id="tab-transactions" onclick="switchTab('transactions')">💳 Transactions</button>
       <button class="tab-btn" id="tab-withdrawals" onclick="switchTab('withdrawals')">🏦 Virements <span id="pending-badge" style="display:none;background:var(--warning);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px"></span></button>
+      <button class="tab-btn" id="tab-balances" onclick="switchTab('balances')">💰 Soldes</button>
     </div>
 
     <!-- MARCHANDS -->
@@ -224,7 +225,14 @@
 </div>
 
 <!-- MODAL DÉTAIL -->
-<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+    <!-- PANEL SOLDES -->
+    <div id="panel-balances" style="display:none">
+      <div id="balances-body">
+        <div class="empty"><div class="spinner"></div><br/>Chargement...</div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-title" id="modal-title">Détails marchand</div>
     <div id="modal-body"></div>
@@ -320,11 +328,14 @@
     document.getElementById('panel-merchants').style.display    = tab === 'merchants'    ? 'block' : 'none';
     document.getElementById('panel-transactions').style.display = tab === 'transactions' ? 'block' : 'none';
     document.getElementById('panel-withdrawals').style.display  = tab === 'withdrawals'  ? 'block' : 'none';
+    document.getElementById('panel-balances').style.display     = tab === 'balances'     ? 'block' : 'none';
     document.getElementById('tab-merchants').classList.toggle('active',    tab === 'merchants');
     document.getElementById('tab-transactions').classList.toggle('active', tab === 'transactions');
     document.getElementById('tab-withdrawals').classList.toggle('active',  tab === 'withdrawals');
+    document.getElementById('tab-balances').classList.toggle('active',     tab === 'balances');
     if (tab === 'transactions') loadTransactions('all', 'all');
     if (tab === 'withdrawals')  loadWithdrawals('all');
+    if (tab === 'balances')     loadBalances();
   }
 
   async function loadWithdrawals(status = 'all') {
@@ -694,6 +705,76 @@
     if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doAdminLogin();
     if (e.key === 'Escape') closeModal();
   });
+  // ── SOLDES MARCHANDS ─────────────────────────────────────────
+  async function loadBalances() {
+    document.getElementById('balances-body').innerHTML = '<div class="empty"><div class="spinner"></div><br/>Chargement...</div>';
+    try {
+      const res = await fetch(`${API}/admin/merchants/balances`, {
+        headers: { 'x-admin-secret': adminSecret }
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      renderBalances(data.merchants);
+    } catch (err) {
+      document.getElementById('balances-body').innerHTML = `<div class="empty">Erreur : ${err.message}</div>`;
+    }
+  }
+
+  function renderBalances(merchants) {
+    if (merchants.length === 0) {
+      document.getElementById('balances-body').innerHTML = '<div class="empty">Aucun marchand</div>';
+      return;
+    }
+
+    const fmt = (amount, currency) => {
+      if (!amount || amount === 0) return `<span style="color:var(--muted)">0 ${currency}</span>`;
+      const color = amount < 0 ? 'var(--danger)' : 'inherit';
+      return `<span style="color:${color}">${new Intl.NumberFormat('fr-FR').format(Math.round(amount))} ${currency}</span>`;
+    };
+
+    const rows = merchants.map(m => {
+      const currencyRows = m.currencies.map(cur => {
+        const b = m.balancesByCurrency[cur];
+        return `<tr style="background:var(--cream)">
+          <td></td>
+          <td style="font-size:11px;color:var(--muted);padding:6px 20px">${cur}</td>
+          <td style="padding:6px 20px">${fmt(b.depositVolume, cur)}</td>
+          <td style="padding:6px 20px">${fmt(b.payoutVolume, cur)}</td>
+          <td style="padding:6px 20px;color:var(--warning)">${fmt(b.fees, cur)}</td>
+          <td style="padding:6px 20px;color:var(--muted)">${fmt(b.withdrawals, cur)}</td>
+          <td style="padding:6px 20px;font-weight:600">${fmt(b.availableBalance, cur)}</td>
+        </tr>`;
+      }).join('');
+
+      return `<tr>
+        <td>
+          <strong>${m.name}</strong><br/>
+          <span class="td-muted" style="font-size:11px">${m.email}</span>
+        </td>
+        <td>
+          <span class="badge ${m.isActive ? 'active' : 'inactive'}">${m.isActive ? 'Actif' : 'Sandbox'}</span>
+        </td>
+        <td colspan="5" style="color:var(--muted);font-size:12px">${m.totalTransactions} transaction${m.totalTransactions !== 1 ? 's' : ''}</td>
+      </tr>
+      ${currencyRows}`;
+    }).join('');
+
+    document.getElementById('balances-body').innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Marchand</th>
+          <th>Statut</th>
+          <th>Collecté</th>
+          <th>Payout</th>
+          <th>Frais NDSGPay</th>
+          <th>Virements</th>
+          <th>Solde disponible</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
 </script>
 </body>
 </html>
+
