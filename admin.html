@@ -710,7 +710,7 @@
     document.getElementById('balances-body').innerHTML = '<div class="empty"><div class="spinner"></div><br/>Chargement...</div>';
     try {
       const res = await fetch(`${API}/admin/merchants/balances`, {
-        headers: { 'x-admin-secret': adminSecret }
+        headers: { 'x-admin-key': adminKey }
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
