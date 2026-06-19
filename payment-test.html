@@ -1,4 +1,3 @@
-// TESTS
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -64,18 +63,21 @@
     .step { flex: 1; height: 3px; border-radius: 2px; background: var(--border); }
     .step.active { background: var(--blue); }
     .step.done { background: var(--success); }
+
+    /* Hint numéro dynamique */
+    .msisdn-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
   </style>
 </head>
 <body>
 <div class="container">
 
   <div class="header">
-    <div class="logo">NDSG<span>Pay</span> <span class="prod-badge">🚀 Production</span></div>
-    <div class="sub">Test de paiement réel — vrai argent</div>
+    <div class="logo">NDSG<span>Pay</span> <span class="prod-badge">Production</span></div>
+    <div class="sub">Test de paiement reel — vrai argent</div>
   </div>
 
   <div class="info-box">
-    ⚠️ <strong>Attention</strong> — ce test utilise de vrais fonds. Utilise un petit montant (500 XAF minimum).
+    Attention — ce test utilise de vrais fonds. Utilise un petit montant (500 XAF minimum).
   </div>
 
   <!-- Login -->
@@ -95,10 +97,10 @@
 
   <!-- Paiement -->
   <div id="payment-card" class="card" style="display:none">
-    <div class="card-title"><div class="dot" style="background:var(--success)"></div>Choisir le type d'opération</div>
+    <div class="card-title"><div class="dot" style="background:var(--success)"></div>Choisir le type d'operation</div>
     <div style="display:flex;gap:10px;margin-bottom:20px">
-      <button class="tab-op active" id="op-deposit" onclick="switchOp('deposit')">📥 Dépôt (collecter)</button>
-      <button class="tab-op" id="op-payout" onclick="switchOp('payout')">📤 Payout (envoyer)</button>
+      <button class="tab-op active" id="op-deposit" onclick="switchOp('deposit')">Depot (collecter)</button>
+      <button class="tab-op" id="op-payout" onclick="switchOp('payout')">Payout (envoyer)</button>
     </div>
 
     <div class="step-indicator">
@@ -108,35 +110,84 @@
     </div>
 
     <div class="form-group">
-      <label class="form-label">Montant (XAF)</label>
-      <input type="number" class="form-input" id="amount" value="500" min="100" />
-    </div>
-    <div class="form-group">
-      <label class="form-label">Opérateur</label>
-      <select class="form-select" id="correspondent">
-        <option value="AIRTEL_GAB">Airtel Money — Gabon</option>
-        <option value="MOOV_GAB">Moov Money — Gabon</option>
+      <label class="form-label">Operateur & Pays</label>
+      <select class="form-select" id="correspondent" onchange="onCorrespondentChange()">
+        <optgroup label="Gabon (XAF)">
+          <option value="AIRTEL_GA">Airtel Money — Gabon</option>
+          <option value="MOOV_GA">Moov Money — Gabon</option>
+        </optgroup>
+        <optgroup label="Cameroun (XAF)">
+          <option value="MTN_MOMO_CMR">MTN MoMo — Cameroun</option>
+        </optgroup>
+        <optgroup label="Congo-Brazzaville (XAF)">
+          <option value="AIRTEL_COG">Airtel Money — Congo</option>
+          <option value="MTN_MOMO_COG">MTN MoMo — Congo</option>
+        </optgroup>
+        <optgroup label="Benin (XOF)">
+          <option value="MTN_MOMO_BEN">MTN MoMo — Benin</option>
+          <option value="MOOV_BEN">Moov Money — Benin</option>
+        </optgroup>
+        <optgroup label="Cote d'Ivoire (XOF)">
+          <option value="MTN_MOMO_CIV">MTN MoMo — Cote d'Ivoire</option>
+          <option value="ORANGE_CIV">Orange Money — Cote d'Ivoire</option>
+        </optgroup>
+        <optgroup label="Senegal (XOF)">
+          <option value="ORANGE_SEN">Orange Money — Senegal</option>
+          <option value="FREE_SEN">Free Money — Senegal</option>
+        </optgroup>
+        <optgroup label="RDC (CDF)">
+          <option value="AIRTEL_COD">Airtel Money — RDC</option>
+          <option value="ORANGE_COD">Orange Money — RDC</option>
+          <option value="VODACOM_COD">Vodacom — RDC</option>
+        </optgroup>
+        <optgroup label="Kenya (KES)">
+          <option value="MPESA_KEN">M-Pesa — Kenya</option>
+        </optgroup>
+        <optgroup label="Rwanda (RWF)">
+          <option value="AIRTEL_RWA">Airtel Money — Rwanda</option>
+          <option value="MTN_MOMO_RWA">MTN MoMo — Rwanda</option>
+        </optgroup>
+        <optgroup label="Ouganda (UGX)">
+          <option value="AIRTEL_UGA">Airtel Money — Ouganda</option>
+          <option value="MTN_MOMO_UGA">MTN MoMo — Ouganda</option>
+        </optgroup>
+        <optgroup label="Zambie (ZMW)">
+          <option value="AIRTEL_ZMB">Airtel Money — Zambie</option>
+          <option value="MTN_MOMO_ZMB">MTN MoMo — Zambie</option>
+          <option value="ZAMTEL_ZMB">Zamtel — Zambie</option>
+        </optgroup>
+        <optgroup label="Sierra Leone (SLE)">
+          <option value="ORANGE_SLE">Orange Money — Sierra Leone</option>
+        </optgroup>
       </select>
     </div>
+
     <div class="form-group">
-      <label class="form-label" id="msisdn-label">Ton numéro de téléphone</label>
-      <input type="text" class="form-input" id="msisdn" placeholder="24177XXXXXX" />
+      <label class="form-label">Montant</label>
+      <input type="number" class="form-input" id="amount" value="500" min="100" />
     </div>
+
     <div class="form-group">
-      <label class="form-label">Description (max 22 caractères)</label>
+      <label class="form-label" id="msisdn-label">Numero de telephone</label>
+      <input type="text" class="form-input" id="msisdn" placeholder="24177XXXXXX" />
+      <div class="msisdn-hint" id="msisdn-hint">Format Gabon : 241 + 8 chiffres (ex: 24177000000)</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Description (max 22 caracteres)</label>
       <input type="text" class="form-input" id="description" value="Test NDSGPay" maxlength="22" />
     </div>
-    <button class="btn" id="launch-btn" onclick="launchOperation(this)">📥 Lancer le dépôt</button>
+    <button class="btn" id="launch-btn" onclick="launchOperation(this)">Lancer le depot</button>
     <div class="result" id="result-payment"></div>
   </div>
 
   <!-- Statut -->
   <div id="status-card" class="status-card">
-    <div class="status-icon">⏳</div>
+    <div class="status-icon">&#x23F3;</div>
     <div class="status-title">En attente de confirmation</div>
-    <div class="status-sub">Une demande a été envoyée sur ton téléphone. Accepte-la pour confirmer le paiement.</div>
+    <div class="status-sub">Une demande a ete envoyee sur le telephone. Accepte-la pour confirmer.</div>
     <div class="tx-id" id="tx-id-display"></div>
-    <button class="btn" style="margin-top:16px" onclick="checkStatus()">🔍 Vérifier le statut</button>
+    <button class="btn" style="margin-top:16px" onclick="checkStatus()">Verifier le statut</button>
     <div class="result" id="result-status" style="text-align:left"></div>
   </div>
 
@@ -148,12 +199,49 @@
   let currentTxId = null;
   let currentOp = 'deposit';
 
+  // Mapping correspondant -> devise + format numero
+  const CORR_META = {
+    AIRTEL_GA:      { currency: 'XAF', hint: 'Format Gabon : 241 + 8 chiffres (ex: 24177000000)' },
+    MOOV_GA:        { currency: 'XAF', hint: 'Format Gabon : 241 + 8 chiffres (ex: 24166000000)' },
+    MTN_MOMO_CMR:   { currency: 'XAF', hint: 'Format Cameroun : 237 + 9 chiffres (ex: 237670000000)' },
+    AIRTEL_COG:     { currency: 'XAF', hint: 'Format Congo : 242 + 9 chiffres' },
+    MTN_MOMO_COG:   { currency: 'XAF', hint: 'Format Congo : 242 + 9 chiffres' },
+    MTN_MOMO_BEN:   { currency: 'XOF', hint: 'Format Benin : 229 + 8 chiffres' },
+    MOOV_BEN:       { currency: 'XOF', hint: 'Format Benin : 229 + 8 chiffres' },
+    MTN_MOMO_CIV:   { currency: 'XOF', hint: "Format Cote d'Ivoire : 225 + 10 chiffres" },
+    ORANGE_CIV:     { currency: 'XOF', hint: "Format Cote d'Ivoire : 225 + 10 chiffres" },
+    ORANGE_SEN:     { currency: 'XOF', hint: 'Format Senegal : 221 + 9 chiffres' },
+    FREE_SEN:       { currency: 'XOF', hint: 'Format Senegal : 221 + 9 chiffres' },
+    AIRTEL_COD:     { currency: 'CDF', hint: 'Format RDC : 243 + 9 chiffres' },
+    ORANGE_COD:     { currency: 'CDF', hint: 'Format RDC : 243 + 9 chiffres' },
+    VODACOM_COD:    { currency: 'CDF', hint: 'Format RDC : 243 + 9 chiffres' },
+    MPESA_KEN:      { currency: 'KES', hint: 'Format Kenya : 254 + 9 chiffres (ex: 254712000000)' },
+    AIRTEL_RWA:     { currency: 'RWF', hint: 'Format Rwanda : 250 + 9 chiffres' },
+    MTN_MOMO_RWA:   { currency: 'RWF', hint: 'Format Rwanda : 250 + 9 chiffres' },
+    AIRTEL_UGA:     { currency: 'UGX', hint: 'Format Ouganda : 256 + 9 chiffres' },
+    MTN_MOMO_UGA:   { currency: 'UGX', hint: 'Format Ouganda : 256 + 9 chiffres' },
+    AIRTEL_ZMB:     { currency: 'ZMW', hint: 'Format Zambie : 260 + 9 chiffres' },
+    MTN_MOMO_ZMB:   { currency: 'ZMW', hint: 'Format Zambie : 260 + 9 chiffres' },
+    ZAMTEL_ZMB:     { currency: 'ZMW', hint: 'Format Zambie : 260 + 9 chiffres' },
+    ORANGE_SLE:     { currency: 'SLE', hint: 'Format Sierra Leone : 232 + 8 chiffres' },
+  };
+
+  function onCorrespondentChange() {
+    const corr = document.getElementById('correspondent').value;
+    const meta = CORR_META[corr] || { currency: 'XAF', hint: '' };
+    document.getElementById('msisdn-hint').textContent = meta.hint;
+    // Mettre à jour le label montant avec la devise
+    document.querySelector('label[for="amount"], .form-group .form-label').textContent;
+    const amountLabel = document.getElementById('amount').previousElementSibling;
+    if (amountLabel) amountLabel.textContent = `Montant (${meta.currency})`;
+  }
+
   function switchOp(op) {
     currentOp = op;
     document.getElementById('op-deposit').classList.toggle('active', op === 'deposit');
     document.getElementById('op-payout').classList.toggle('active', op === 'payout');
-    document.getElementById('msisdn-label').textContent = op === 'deposit' ? 'Ton numéro de téléphone' : 'Numéro du bénéficiaire';
-    document.getElementById('launch-btn').textContent = op === 'deposit' ? '📥 Lancer le dépôt' : '📤 Lancer le payout';
+    document.getElementById('msisdn-label').textContent = op === 'deposit' ? 'Numero de telephone' : 'Numero du beneficiaire';
+    document.getElementById('launch-btn').textContent = op === 'deposit' ? 'Lancer le depot' : 'Lancer le payout';
     document.getElementById('result-payment').style.display = 'none';
   }
 
@@ -184,10 +272,11 @@
       jwtToken = data.token;
       document.getElementById('login-card').style.display = 'none';
       document.getElementById('payment-card').style.display = 'block';
+      onCorrespondentChange(); // initialiser hint et devise
 
     } catch (err) {
       document.getElementById('login-error').style.display = 'block';
-      document.getElementById('login-error').textContent = 'Erreur réseau';
+      document.getElementById('login-error').textContent = 'Erreur reseau';
       btn.innerHTML = 'Se connecter';
       btn.disabled = false;
     }
@@ -201,24 +290,31 @@
     }
   }
 
-  async function initiateDeposit(btn) {
-    const amount = document.getElementById('amount').value;
-    const correspondent = document.getElementById('correspondent').value;
-    const msisdn = document.getElementById('msisdn').value;
-    const description = document.getElementById('description').value;
+  function getFormData() {
+    const corr = document.getElementById('correspondent').value;
+    const meta = CORR_META[corr] || { currency: 'XAF' };
+    return {
+      amount:        document.getElementById('amount').value,
+      currency:      meta.currency,
+      correspondent: corr,
+      msisdn:        document.getElementById('msisdn').value,
+      description:   document.getElementById('description').value
+    };
+  }
 
-    if (!msisdn) { alert('Entre ton numéro de téléphone'); return; }
+  async function initiateDeposit(btn) {
+    const { amount, currency, correspondent, msisdn, description } = getFormData();
+    if (!msisdn) { alert('Entre le numero de telephone'); return; }
 
     btn.innerHTML = '<div class="spinner"></div> Envoi...';
     btn.disabled = true;
-
     showLoading('result-payment');
 
     try {
       const res = await fetch(`${API}/pay/deposits`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
-        body: JSON.stringify({ amount: parseInt(amount), currency: 'XAF', correspondent, msisdn, description })
+        body: JSON.stringify({ amount: parseInt(amount), currency, correspondent, msisdn, description })
       });
       const data = await res.json();
 
@@ -228,34 +324,29 @@
         setTimeout(() => showStatusCard(data.depositId, 'deposit'), 1500);
       } else {
         showResult('result-payment', data, true);
-        btn.innerHTML = '📥 Lancer le dépôt';
+        btn.innerHTML = 'Lancer le depot';
         btn.disabled = false;
       }
     } catch (err) {
       showResult('result-payment', { error: err.message }, true);
-      btn.innerHTML = '📥 Lancer le dépôt';
+      btn.innerHTML = 'Lancer le depot';
       btn.disabled = false;
     }
   }
 
   async function initiatePayout(btn) {
-    const amount = document.getElementById('amount').value;
-    const correspondent = document.getElementById('correspondent').value;
-    const msisdn = document.getElementById('msisdn').value;
-    const description = document.getElementById('description').value;
-
-    if (!msisdn) { alert('Entre le numéro du bénéficiaire'); return; }
+    const { amount, currency, correspondent, msisdn, description } = getFormData();
+    if (!msisdn) { alert('Entre le numero du beneficiaire'); return; }
 
     btn.innerHTML = '<div class="spinner"></div> Envoi...';
     btn.disabled = true;
-
     showLoading('result-payment');
 
     try {
       const res = await fetch(`${API}/pay/payouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
-        body: JSON.stringify({ amount: parseInt(amount), currency: 'XAF', correspondent, msisdn, description })
+        body: JSON.stringify({ amount: parseInt(amount), currency, correspondent, msisdn, description })
       });
       const data = await res.json();
 
@@ -265,12 +356,12 @@
         setTimeout(() => showStatusCard(data.payoutId, 'payout'), 1500);
       } else {
         showResult('result-payment', data, true);
-        btn.innerHTML = '📤 Lancer le payout';
+        btn.innerHTML = 'Lancer le payout';
         btn.disabled = false;
       }
     } catch (err) {
       showResult('result-payment', { error: err.message }, true);
-      btn.innerHTML = '📤 Lancer le payout';
+      btn.innerHTML = 'Lancer le payout';
       btn.disabled = false;
     }
   }
@@ -278,40 +369,36 @@
   function showStatusCard(txId, type) {
     document.getElementById('payment-card').style.display = 'none';
     document.getElementById('status-card').style.display = 'block';
-    document.getElementById('tx-id-display').textContent = `ID : ${txId}`;
+    document.getElementById('tx-id-display').textContent = 'ID : ' + txId;
     document.querySelector('.status-title').textContent = type === 'deposit' ? 'En attente de confirmation' : 'Payout en cours';
     document.querySelector('.status-sub').textContent = type === 'deposit'
-      ? 'Une demande a été envoyée sur ton téléphone. Accepte-la pour confirmer.'
-      : 'Le virement est en cours de traitement. Vérifie le statut dans quelques secondes.';
+      ? 'Une demande a ete envoyee sur le telephone. Accepte-la pour confirmer.'
+      : 'Le virement est en cours de traitement. Verifie le statut dans quelques secondes.';
     document.getElementById('step-3').classList.add('active');
   }
 
   async function checkStatus() {
     if (!currentTxId) return;
-
     const result = document.getElementById('result-status');
     result.style.display = 'block';
     showLoading('result-status');
 
-    const type = currentOp;
-
     try {
-      const endpoint = type === 'deposit' ? `/deposits/${currentTxId}` : `/payouts/${currentTxId}`;
+      const endpoint = currentOp === 'deposit' ? `/deposits/${currentTxId}` : `/payouts/${currentTxId}`;
       const res = await fetch(`${API}${endpoint}`, {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const data = await res.json();
-
       const status = data.deposit?.status || data.payout?.status || 'INCONNU';
 
       if (status === 'COMPLETED') {
-        document.querySelector('.status-icon').textContent = '🎉';
-        document.querySelector('.status-title').textContent = type === 'deposit' ? 'Paiement confirmé !' : 'Payout réussi !';
-        document.querySelector('.status-sub').textContent = type === 'deposit' ? 'Le paiement a été reçu avec succès.' : 'Les fonds ont été envoyés avec succès.';
+        document.querySelector('.status-icon').textContent = 'OK';
+        document.querySelector('.status-title').textContent = currentOp === 'deposit' ? 'Paiement confirme !' : 'Payout reussi !';
+        document.querySelector('.status-sub').textContent = currentOp === 'deposit' ? 'Le paiement a ete recu avec succes.' : 'Les fonds ont ete envoyes avec succes.';
         showResult('result-status', data, false);
       } else if (status === 'FAILED') {
-        document.querySelector('.status-icon').textContent = '❌';
-        document.querySelector('.status-title').textContent = 'Opération échouée';
+        document.querySelector('.status-icon').textContent = 'X';
+        document.querySelector('.status-title').textContent = 'Operation echouee';
         showResult('result-status', data, true);
       } else {
         showResult('result-status', data, false);
@@ -331,7 +418,7 @@
     const el = document.getElementById(id);
     el.style.display = 'block';
     el.innerHTML = `
-      <div class="result-header ${isError ? 'error' : 'success'}">${isError ? '❌ Erreur' : '✅ Succès'}</div>
+      <div class="result-header ${isError ? 'error' : 'success'}">${isError ? 'Erreur' : 'Succes'}</div>
       <div class="result-body"><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
   }
 
