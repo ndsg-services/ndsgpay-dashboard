@@ -1295,16 +1295,15 @@
       const s = data.stats;
 
       // KPIs overview
-      updateKPI('kpi-volume', formatXAF(s.totalVolume));
+      updateKPI('kpi-volume', formatAmount(s.totalVolume, 'XAF'));
       updateKPI('kpi-tx', s.totalTransactions.toString());
       updateKPI('kpi-rate', s.successRate !== null ? `${s.successRate}%` : '—');
-      updateKPI('kpi-fees', formatXAF(s.availableBalance));
 
       // KPIs analytics
-      updateKPI('kpi-deposit-vol', formatXAF(s.deposits.volume));
-      updateKPI('kpi-payout-vol', formatXAF(s.payouts.volume));
+      updateKPI('kpi-deposit-vol', formatAmount(s.deposits.volume, 'XAF'));
+      updateKPI('kpi-payout-vol', formatAmount(s.payouts.volume, 'XAF'));
       updateKPI('kpi-rate-2', s.successRate !== null ? `${s.successRate}%` : '—');
-      updateKPI('kpi-fees-2', formatXAF(s.fees));
+      updateKPI('kpi-fees-2', formatAmount(s.fees, 'XAF'));
 
       // Badge transactions
       const badge = document.querySelector('.nav-badge');
@@ -1312,6 +1311,9 @@
 
       // Graphique
       updateChart(s.chart);
+
+      // Soldes multi-devises
+      renderMultiCurrencyBalances(s.balancesByCurrency, s.currencies);
 
     } catch (err) {
       console.error('Stats error:', err);
@@ -1326,6 +1328,71 @@
   function formatXAF(amount) {
     if (!amount || amount === 0) return '0 XAF';
     return new Intl.NumberFormat('fr-FR').format(Math.round(amount)) + ' XAF';
+  }
+
+  function formatAmount(amount, currency) {
+    if (!amount || amount === 0) return `0 ${currency}`;
+    return new Intl.NumberFormat('fr-FR').format(Math.round(amount)) + ` ${currency}`;
+  }
+
+  function renderMultiCurrencyBalances(balancesByCurrency, currencies) {
+    if (!balancesByCurrency || !currencies) return;
+
+    // ── KPI "Solde disponible" (overview) ───────────────────
+    const feesEl = document.getElementById('kpi-fees');
+    if (feesEl) {
+      if (currencies.length > 1) {
+        feesEl.innerHTML = currencies.map(cur => {
+          const b = balancesByCurrency[cur];
+          if (!b) return '';
+          const amt = new Intl.NumberFormat('fr-FR').format(Math.round(b.availableBalance));
+          return `<div style="font-size:${currencies.length > 2 ? '16px' : '20px'};line-height:1.5">${amt} <span style="font-size:11px;color:var(--text-muted)">${cur}</span></div>`;
+        }).join('');
+      } else {
+        const cur = currencies[0] || 'XAF';
+        const b = balancesByCurrency[cur];
+        feesEl.textContent = b ? formatAmount(b.availableBalance, cur) : '0 XAF';
+      }
+    }
+
+    // ── Table multi-devises dans Analytics ──────────────────
+    const analyticsPanel = document.getElementById('panel-analytics');
+    if (!analyticsPanel) return;
+
+    let multiBlock = document.getElementById('multi-currency-block');
+    if (!multiBlock) {
+      multiBlock = document.createElement('div');
+      multiBlock.id = 'multi-currency-block';
+      multiBlock.style.cssText = 'margin-bottom:24px';
+      const kpiGrid = analyticsPanel.querySelector('.kpi-grid');
+      if (kpiGrid) kpiGrid.after(multiBlock);
+    }
+
+    multiBlock.innerHTML = `
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Soldes par devise</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Devise</th><th>Collecté</th><th>Payout</th><th>Frais</th><th>Virements</th><th>Solde disponible</th>
+          </tr></thead>
+          <tbody>
+            ${currencies.map(cur => {
+              const b = balancesByCurrency[cur];
+              if (!b) return '';
+              return `<tr>
+                <td style="font-weight:600">${cur}</td>
+                <td>${formatAmount(b.depositVolume, cur)}</td>
+                <td>${formatAmount(b.payoutVolume, cur)}</td>
+                <td style="color:var(--warning)">${formatAmount(b.fees, cur)}</td>
+                <td>${formatAmount(b.withdrawals, cur)}</td>
+                <td style="font-weight:600;color:var(--success)">${formatAmount(b.availableBalance, cur)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
   }
 
   // ── CHART ────────────────────────────────────────────────────
@@ -1650,4 +1717,3 @@
 </body>
 </html>
 </html>
-
