@@ -1311,23 +1311,19 @@
         }
       }
 
-      // Afficher les clés API
-      if (merchant.apiKey) {
-        const keyEl = document.getElementById('pub-key');
-        const secEl = document.getElementById('sec-key');
-        const prodLabel = document.getElementById('api-env-label');
-        if (merchant.isActive) {
-          if (keyEl) keyEl.textContent = 'ndsgpay_pk_' + merchant.apiKey;
-          if (secEl) secEl.textContent = 'ndsgpay_sk_••••••••••••••••••••••••';
-          secEl._full = 'ndsgpay_sk_' + merchant.apiKey;
-          if (prodLabel) prodLabel.textContent = 'Clés Production';
-        } else {
-          if (keyEl) keyEl.textContent = 'ndsgpay_test_pk_' + merchant.apiKey;
-          if (secEl) secEl.textContent = 'ndsgpay_test_sk_••••••••••••••••••••••••';
-          secEl._full = 'ndsgpay_test_sk_' + merchant.apiKey;
-          if (prodLabel) prodLabel.textContent = 'Clés Sandbox';
-        }
+      // Afficher les cles API (publicKey + secretKey)
+      const keyEl = document.getElementById('pub-key');
+      const secEl = document.getElementById('sec-key');
+      const prodLabel = document.getElementById('api-env-label');
+      const pk = merchant.publicKey  || ('pk_test_' + merchant.apiKey);
+      const sk = merchant.secretKey  || ('sk_test_' + merchant.apiKey);
+      if (keyEl) keyEl.textContent = pk;
+      if (secEl) {
+        secEl.textContent = sk.substring(0, 12) + '••••••••••••••••••••••••••••••••••••••••••••••••••';
+        secEl._full = sk;
+        secEl._revealed = false;
       }
+      if (prodLabel) prodLabel.textContent = merchant.isActive ? 'Cles Production' : 'Cles Sandbox';
     }
 
     initChartLabels();
@@ -1385,6 +1381,46 @@
     btn.disabled = false;
     btn.textContent = 'Sauvegarder';
     setTimeout(() => { msg.style.display = 'none'; }, 4000);
+  }
+
+  async function confirmRotateKeys() {
+    if (!confirm('Regenerer les cles API ?\n\nATTENTION : vos anciennes cles seront immediatement invalides. Toute application utilisant les anciennes cles cessera de fonctionner.')) return;
+
+    const btn = document.getElementById('btn-rotate');
+    btn.disabled = true;
+    btn.textContent = 'Generation...';
+
+    try {
+      const res = await fetch(API + '/merchant/rotate-keys', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + jwtToken }
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      // Mettre a jour le cache et l'affichage
+      const stored = JSON.parse(sessionStorage.getItem('ndsgpay_merchant') || '{}');
+      stored.publicKey = data.merchant.publicKey;
+      stored.secretKey = data.merchant.secretKey;
+      sessionStorage.setItem('ndsgpay_merchant', JSON.stringify(stored));
+      currentMerchant = stored;
+
+      const keyEl = document.getElementById('pub-key');
+      const secEl = document.getElementById('sec-key');
+      if (keyEl) keyEl.textContent = data.merchant.publicKey;
+      if (secEl) {
+        secEl._full = data.merchant.secretKey;
+        secEl._revealed = false;
+        secEl.textContent = data.merchant.secretKey.substring(0, 12) + '••••••••••••••••••••••••••••••••••••••••••••••••••';
+      }
+
+      alert('Nouvelles cles generees avec succes !\n\nMettez a jour vos applications immediatement.');
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Regenerer les cles';
   }
 
   function doLogout() {
