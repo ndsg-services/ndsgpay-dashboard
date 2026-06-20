@@ -632,7 +632,30 @@
       <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${m.email}</span></div>
       <div class="detail-row"><span class="detail-label">Téléphone</span><span class="detail-value">${m.phone || '—'}</span></div>
       <div class="detail-row"><span class="detail-label">Statut</span><span class="detail-value"><span class="badge ${m.isActive ? 'active' : 'pending'}">${m.isActive ? 'Actif' : 'En attente'}</span></span></div>
-      <div class="detail-row"><span class="detail-label">Clé API</span><span class="detail-value" style="font-family:var(--mono);font-size:11px">${m.apiKey}</span></div>
+      <div class="detail-row">
+        <span class="detail-label">Clé publique</span>
+        <span class="detail-value" style="font-family:var(--mono);font-size:11px">
+          ${m.publicKey
+            ? m.publicKey
+            : '<span style="color:var(--warning)">Non générée</span>'}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Clé secrète</span>
+        <span class="detail-value" style="font-size:11px">
+          ${m.secretKey
+            ? '<span style="color:var(--success)">✓ Générée (non visible)</span>'
+            : '<span style="color:var(--warning)">Non générée</span>'}
+        </span>
+      </div>
+      ${!m.publicKey || !m.secretKey ? `
+      <div class="detail-row">
+        <button onclick="adminGenerateKeys('${m.id}')"
+          style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:7px 16px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)">
+          🔑 Générer les clés API
+        </button>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px">Les clés seront envoyées au marchand par email</span>
+      </div>` : ''}
       <div class="detail-row"><span class="detail-label">Dépôts</span><span class="detail-value">${m._count.deposits}</span></div>
       <div class="detail-row"><span class="detail-label">Payouts</span><span class="detail-value">${m._count.payouts}</span></div>
       <div class="detail-row"><span class="detail-label">Inscrit le</span><span class="detail-value">${new Date(m.createdAt).toLocaleDateString('fr-FR')}</span></div>
@@ -663,6 +686,31 @@
     actionBtn.onclick = () => toggleMerchant(m.id, !m.isActive);
 
     document.getElementById('modal').style.display = 'flex';
+  }
+
+  async function adminGenerateKeys(merchantId) {
+    if (!confirm('Générer de nouvelles clés API pour ce marchand ?\nSes éventuelles clés existantes seront remplacées.')) return;
+    try {
+      const res = await fetch(API + '/admin/merchants/' + merchantId + '/generate-keys', {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey }
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      // Mettre à jour le marchand dans la liste locale
+      const idx = allMerchants.findIndex(m => m.id === merchantId);
+      if (idx >= 0) {
+        allMerchants[idx].publicKey = data.merchant.publicKey;
+        allMerchants[idx].secretKey = 'generated';
+      }
+
+      alert('Clés générées pour ' + data.merchant.name + '\n\nClé publique : ' + data.merchant.publicKey + '\n\nLa clé secrète a été générée — le marchand peut la voir dans son dashboard.');
+      closeModal();
+      loadMerchants();
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    }
   }
 
   function closeModal() {
