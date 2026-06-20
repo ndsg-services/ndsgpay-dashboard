@@ -964,17 +964,22 @@
           <div class="api-key-card">
             <div class="api-key-row">
               <span class="api-key-label">Clé publique</span>
-              <span class="api-key-val" id="pub-key">ndsgpay_test_pk_••••••••••••••••••••••••</span>
+              <span class="api-key-val" id="pub-key">Chargement...</span>
               <button class="copy-btn" onclick="copyKey('pub-key', this)">Copier</button>
             </div>
             <div class="api-key-row">
               <span class="api-key-label">Clé secrète</span>
-              <span class="api-key-val" id="sec-key">ndsgpay_test_sk_••••••••••••••••••••••••</span>
+              <span class="api-key-val" id="sec-key">sk_live_••••••••••••••••••••••••••••••••••••••••••••••••••••••••••</span>
               <button class="copy-btn" onclick="revealKey()">Révéler</button>
             </div>
-            <div class="api-meta">
-              <div class="api-meta-item">Créée le <strong>—</strong></div>
-              <div class="api-meta-item">Dernière utilisation <strong>Jamais</strong></div>
+            <div class="api-meta" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div style="display:flex;gap:16px">
+                <div class="api-meta-item">Clé publique — identifie votre compte</div>
+                <div class="api-meta-item">Clé secrète — pour les appels API serveur</div>
+              </div>
+              <button id="btn-rotate" onclick="confirmRotateKeys()" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--text)">
+                🔄 Régénérer les clés
+              </button>
             </div>
           </div>
         </div>
