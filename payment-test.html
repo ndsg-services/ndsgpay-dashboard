@@ -114,7 +114,6 @@
       <select class="form-select" id="correspondent" onchange="onCorrespondentChange()">
         <optgroup label="Gabon (XAF)">
           <option value="AIRTEL_GA">Airtel Money — Gabon</option>
-          <option value="MOOV_GA">Moov Money — Gabon</option>
         </optgroup>
         <optgroup label="Cameroun (XAF)">
           <option value="MTN_MOMO_CMR">MTN MoMo — Cameroun</option>
@@ -202,7 +201,6 @@
   // Mapping correspondant -> devise + format numero
   const CORR_META = {
     AIRTEL_GA:      { currency: 'XAF', hint: 'Format Gabon : 241 + 8 chiffres (ex: 24177000000)' },
-    MOOV_GA:        { currency: 'XAF', hint: 'Format Gabon : 241 + 8 chiffres (ex: 24166000000)' },
     MTN_MOMO_CMR:   { currency: 'XAF', hint: 'Format Cameroun : 237 + 9 chiffres (ex: 237670000000)' },
     AIRTEL_COG:     { currency: 'XAF', hint: 'Format Congo : 242 + 9 chiffres' },
     MTN_MOMO_COG:   { currency: 'XAF', hint: 'Format Congo : 242 + 9 chiffres' },
