@@ -674,9 +674,65 @@
           </div>
         </div>
         <button onclick="updateFees('${m.id}')" style="margin-top:10px;width:100%;padding:8px;border-radius:7px;background:var(--blue);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)">
-          Enregistrer les taux
+          Enregistrer les taux généraux
         </button>
         <div id="fees-msg" style="font-size:12px;margin-top:6px;text-align:center"></div>
+      </div>
+
+      <!-- Exceptions par correspondant -->
+      <div style="margin-top:16px;padding:14px;background:#f8f9fa;border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:10px">
+          ⚡ Taux par opérateur <span style="font-weight:400;color:var(--muted)">(remplace le taux général)</span>
+        </div>
+        <div id="corr-fees-list">
+          <div style="font-size:12px;color:var(--muted)">Chargement...</div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Opérateur</div>
+            <select id="exc-correspondent" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none;min-width:160px">
+              <option value="AIRTEL_GA">🇬🇦 Airtel Gabon</option>
+              <option value="MOOV_GA">🇬🇦 Moov Gabon</option>
+              <option value="MTN_MOMO_CMR">🇨🇲 MTN Cameroun</option>
+              <option value="ORANGE_CMR">🇨🇲 Orange Cameroun</option>
+              <option value="AIRTEL_COG">🇨🇬 Airtel Congo</option>
+              <option value="MTN_MOMO_COG">🇨🇬 MTN Congo</option>
+              <option value="MTN_MOMO_BEN">🇧🇯 MTN Bénin</option>
+              <option value="MOOV_BEN">🇧🇯 Moov Bénin</option>
+              <option value="MTN_MOMO_CIV">🇨🇮 MTN Côte d'Ivoire</option>
+              <option value="ORANGE_CIV">🇨🇮 Orange Côte d'Ivoire</option>
+              <option value="ORANGE_SEN">🇸🇳 Orange Sénégal</option>
+              <option value="FREE_SEN">🇸🇳 Free Sénégal</option>
+              <option value="AIRTEL_COD">🇨🇩 Airtel RDC</option>
+              <option value="ORANGE_COD">🇨🇩 Orange RDC</option>
+              <option value="VODACOM_COD">🇨🇩 Vodacom RDC</option>
+              <option value="MPESA_KEN">🇰🇪 M-Pesa Kenya</option>
+              <option value="AIRTEL_RWA">🇷🇼 Airtel Rwanda</option>
+              <option value="MTN_MOMO_RWA">🇷🇼 MTN Rwanda</option>
+              <option value="AIRTEL_UGA">🇺🇬 Airtel Ouganda</option>
+              <option value="MTN_MOMO_UGA">🇺🇬 MTN Ouganda</option>
+              <option value="AIRTEL_ZMB">🇿🇲 Airtel Zambie</option>
+              <option value="MTN_MOMO_ZMB">🇿🇲 MTN Zambie</option>
+              <option value="ZAMTEL_ZMB">🇿🇲 Zamtel Zambie</option>
+              <option value="ORANGE_SLE">🇸🇱 Orange Sierra Leone</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Collecte %</div>
+            <input type="number" id="exc-deposit" step="0.01" min="0" max="20" placeholder="ex: 2.25"
+              style="width:80px;padding:7px 10px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none" />
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Payout %</div>
+            <input type="number" id="exc-payout" step="0.01" min="0" max="20" placeholder="ex: 1.30"
+              style="width:80px;padding:7px 10px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none" />
+          </div>
+          <button onclick="addCorrespondentFee('${m.id}')"
+            style="padding:7px 14px;border-radius:7px;background:var(--success);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans);white-space:nowrap">
+            + Ajouter
+          </button>
+        </div>
+        <div id="exc-msg" style="font-size:12px;margin-top:6px;color:var(--muted)"></div>
       </div>
     `;
 
@@ -686,6 +742,9 @@
     actionBtn.onclick = () => toggleMerchant(m.id, !m.isActive);
 
     document.getElementById('modal').style.display = 'flex';
+
+    // Charger les exceptions de taux
+    loadCorrespondentFees(m.id);
   }
 
   async function adminGenerateKeys(merchantId) {
@@ -710,6 +769,89 @@
       loadMerchants();
     } catch (err) {
       alert('Erreur : ' + err.message);
+    }
+  }
+
+  async function loadCorrespondentFees(merchantId) {
+    const el = document.getElementById('corr-fees-list');
+    if (!el) return;
+    try {
+      const res = await fetch(API + '/admin/merchants/' + merchantId + '/correspondent-fees', {
+        headers: { 'x-admin-key': adminKey }
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      if (data.fees.length === 0) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Aucune exception — taux général appliqué partout</div>';
+        return;
+      }
+
+      el.innerHTML = data.fees.map(f => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#fff;border-radius:7px;border:1px solid var(--border);margin-bottom:5px;font-size:12px">
+          <span style="font-weight:500;min-width:160px">${f.correspondent}</span>
+          <span style="color:var(--muted)">
+            ${f.depositFee !== null ? 'Collecte: <strong>' + (f.depositFee * 100).toFixed(2) + '%</strong>' : ''}
+            ${f.payoutFee  !== null ? ' · Payout: <strong>' + (f.payoutFee  * 100).toFixed(2) + '%</strong>' : ''}
+          </span>
+          <button onclick="deleteCorrespondentFee('${merchantId}', '${f.correspondent}')"
+            style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 4px" title="Supprimer">×</button>
+        </div>
+      `).join('');
+    } catch (err) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--danger)">Erreur: ' + err.message + '</div>';
+    }
+  }
+
+  async function addCorrespondentFee(merchantId) {
+    const correspondent = document.getElementById('exc-correspondent').value;
+    const depositFeeVal = document.getElementById('exc-deposit').value;
+    const payoutFeeVal  = document.getElementById('exc-payout').value;
+    const msgEl         = document.getElementById('exc-msg');
+
+    if (!depositFeeVal && !payoutFeeVal) {
+      msgEl.textContent = 'Entrez au moins un taux (collecte ou payout)';
+      msgEl.style.color = 'var(--danger)';
+      return;
+    }
+
+    try {
+      const body = { correspondent };
+      if (depositFeeVal) body.depositFee = parseFloat(depositFeeVal) / 100;
+      if (payoutFeeVal)  body.payoutFee  = parseFloat(payoutFeeVal)  / 100;
+
+      const res = await fetch(API + '/admin/merchants/' + merchantId + '/correspondent-fees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      msgEl.textContent = 'Exception ajoutée';
+      msgEl.style.color = 'var(--success)';
+      document.getElementById('exc-deposit').value = '';
+      document.getElementById('exc-payout').value  = '';
+      loadCorrespondentFees(merchantId);
+      setTimeout(() => { msgEl.textContent = ''; }, 3000);
+    } catch (err) {
+      msgEl.textContent = 'Erreur: ' + err.message;
+      msgEl.style.color = 'var(--danger)';
+    }
+  }
+
+  async function deleteCorrespondentFee(merchantId, correspondent) {
+    if (!confirm('Supprimer l\'exception pour ' + correspondent + ' ?\nLe taux général s\'appliquera à nouveau.')) return;
+    try {
+      const res = await fetch(API + '/admin/merchants/' + merchantId + '/correspondent-fees/' + correspondent, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': adminKey }
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      loadCorrespondentFees(merchantId);
+    } catch (err) {
+      alert('Erreur: ' + err.message);
     }
   }
 
