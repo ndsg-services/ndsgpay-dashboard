@@ -237,9 +237,31 @@
 <!-- MODAL DÉTAIL -->
     <!-- PANEL SOLDES -->
     <div id="panel-balances" style="display:none">
-      <div id="balances-body">
-        <div class="empty"><div class="spinner"></div><br/>Chargement...</div>
+
+      <!-- Wallets PawaPay temps réel -->
+      <div class="table-card" style="margin-bottom:16px">
+        <div class="table-header">
+          <div class="table-title">💳 Wallets PawaPay <span style="font-size:11px;font-weight:400;color:var(--muted)">(temps réel)</span></div>
+          <button onclick="loadPawapayWallets()" id="btn-refresh-wallets"
+            style="padding:4px 12px;border-radius:7px;border:1px solid var(--border-strong);background:#fff;font-size:12px;cursor:pointer;font-family:var(--sans)">
+            🔄 Actualiser
+          </button>
+        </div>
+        <div id="pawapay-wallets-body">
+          <div class="empty" style="padding:16px">Cliquez sur Actualiser pour charger les soldes PawaPay</div>
+        </div>
       </div>
+
+      <!-- Soldes marchands par correspondant -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">📊 Soldes marchands <span style="font-size:11px;font-weight:400;color:var(--muted)">(par correspondant)</span></div>
+        </div>
+        <div id="balances-body">
+          <div class="empty"><div class="spinner"></div><br/>Chargement...</div>
+        </div>
+      </div>
+
     </div>
 
     <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
@@ -977,45 +999,110 @@
     };
 
     const rows = merchants.map(m => {
-      const currencyRows = m.currencies.map(cur => {
-        const b = m.balancesByCurrency[cur];
-        return `<tr style="background:var(--cream)">
-          <td></td>
-          <td style="font-size:11px;color:var(--muted);padding:6px 20px">${cur}</td>
-          <td style="padding:6px 20px">${fmt(b.depositVolume, cur)}</td>
-          <td style="padding:6px 20px">${fmt(b.payoutVolume, cur)}</td>
-          <td style="padding:6px 20px;color:var(--warning)">${fmt(b.fees, cur)}</td>
-          <td style="padding:6px 20px;color:var(--muted)">${fmt(b.withdrawals, cur)}</td>
-          <td style="padding:6px 20px;font-weight:600">${fmt(b.availableBalance, cur)}</td>
-        </tr>`;
-      }).join('');
+      // Grouper par correspondant
+      const corrEntries = Object.entries(m.balancesByCorrespondent || {});
+      const corrRows = corrEntries.length > 0
+        ? corrEntries.map(([corr, b]) => `
+          <tr style="background:var(--cream)">
+            <td></td>
+            <td style="font-size:11px;padding:5px 16px">
+              <span style="color:var(--muted)">${b.flag || ''}</span>
+              <span class="td-mono" style="font-size:10px">${corr}</span>
+            </td>
+            <td style="padding:5px 16px;font-size:12px">${fmt(b.depositVolume, b.currency)}</td>
+            <td style="padding:5px 16px;font-size:12px">${fmt(b.payoutVolume, b.currency)}</td>
+            <td style="padding:5px 16px;font-size:12px;color:var(--warning)">${fmt(b.fees, b.currency)}</td>
+            <td style="padding:5px 16px;font-size:12px">${fmt(b.withdrawals || 0, b.currency)}</td>
+            <td style="padding:5px 16px;font-size:12px;font-weight:600;color:var(--success)">${fmt(b.availableBalance, b.currency)}</td>
+          </tr>`).join('')
+        : m.currencies.map(cur => {
+            const b = m.balancesByCurrency[cur];
+            return `<tr style="background:var(--cream)">
+              <td></td>
+              <td style="font-size:11px;color:var(--muted);padding:5px 16px">${cur}</td>
+              <td style="padding:5px 16px">${fmt(b.depositVolume, cur)}</td>
+              <td style="padding:5px 16px">${fmt(b.payoutVolume, cur)}</td>
+              <td style="padding:5px 16px;color:var(--warning)">${fmt(b.fees, cur)}</td>
+              <td style="padding:5px 16px;color:var(--muted)">${fmt(b.withdrawals, cur)}</td>
+              <td style="padding:5px 16px;font-weight:600">${fmt(b.availableBalance, cur)}</td>
+            </tr>`;
+          }).join('');
 
       return `<tr>
-        <td>
-          <strong>${m.name}</strong><br/>
-          <span class="td-muted" style="font-size:11px">${m.email}</span>
-        </td>
-        <td>
-          <span class="badge ${m.isActive ? 'active' : 'inactive'}">${m.isActive ? 'Actif' : 'Sandbox'}</span>
-        </td>
+        <td><strong>${m.name}</strong><br/><span style="font-size:11px;color:var(--muted)">${m.email}</span></td>
+        <td><span class="badge ${m.isActive ? 'active' : 'inactive'}">${m.isActive ? 'Actif' : 'Sandbox'}</span></td>
         <td colspan="5" style="color:var(--muted);font-size:12px">${m.totalTransactions} transaction${m.totalTransactions !== 1 ? 's' : ''}</td>
-      </tr>
-      ${currencyRows}`;
+      </tr>${corrRows}`;
     }).join('');
 
     document.getElementById('balances-body').innerHTML = `
       <table>
         <thead><tr>
-          <th>Marchand</th>
-          <th>Statut</th>
-          <th>Collecté</th>
-          <th>Payout</th>
-          <th>Frais NDSGPay</th>
-          <th>Virements</th>
-          <th>Solde disponible</th>
+          <th>Marchand</th><th>Opérateur</th>
+          <th>Collecté</th><th>Payout</th>
+          <th>Frais</th><th>Virements</th>
+          <th>Solde dispo.</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
+  }
+
+  async function loadPawapayWallets() {
+    const el = document.getElementById('pawapay-wallets-body');
+    const btn = document.getElementById('btn-refresh-wallets');
+    el.innerHTML = '<div class="empty" style="padding:12px"><div class="spinner"></div> Chargement...</div>';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(API + '/admin/pawapay-wallets', {
+        headers: { 'x-admin-key': adminKey }
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      const wallets = data.wallets;
+      const fmt = (amount, currency) => {
+        if (!amount || parseFloat(amount) === 0) return `<span style="color:var(--muted)">0 ${currency}</span>`;
+        return `<strong>${new Intl.NumberFormat('fr-FR').format(parseFloat(amount))} ${currency}</strong>`;
+      };
+
+      // Format PawaPay wallets/balances retourne un tableau
+      const items = Array.isArray(wallets) ? wallets : (wallets.balances || wallets.wallets || []);
+
+      if (items.length === 0) {
+        el.innerHTML = '<div class="empty" style="padding:12px">Aucun wallet trouvé</div>';
+        return;
+      }
+
+      const COUNTRY_FLAGS = {
+        GAB:'🇬🇦', CMR:'🇨🇲', COG:'🇨🇬', COD:'🇨🇩', BEN:'🇧🇯',
+        CIV:'🇨🇮', SEN:'🇸🇳', KEN:'🇰🇪', RWA:'🇷🇼', UGA:'🇺🇬',
+        ZMB:'🇿🇲', SLE:'🇸🇱'
+      };
+
+      const rows = items.map(w => {
+        const country = w.country || w.countryCode || '';
+        const currency = w.currency || '';
+        const balance = w.balance || w.amount || '0';
+        const flag = COUNTRY_FLAGS[country] || '🌍';
+        const balNum = parseFloat(balance);
+        const color = balNum > 0 ? 'var(--success)' : 'var(--muted)';
+        return `<tr>
+          <td>${flag} ${country}</td>
+          <td>${currency}</td>
+          <td style="font-weight:600;color:${color}">${new Intl.NumberFormat('fr-FR').format(balNum)} ${currency}</td>
+        </tr>`;
+      }).join('');
+
+      el.innerHTML = `<table>
+        <thead><tr><th>Pays</th><th>Devise</th><th>Solde PawaPay</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    } catch (err) {
+      el.innerHTML = `<div class="empty" style="padding:12px;color:var(--danger)">Erreur : ${err.message}</div>`;
+    }
+    btn.disabled = false;
   }
 
 </script>
