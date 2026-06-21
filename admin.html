@@ -161,6 +161,7 @@
       <button class="tab-btn" id="tab-withdrawals" onclick="switchTab('withdrawals')">🏦 Virements <span id="pending-badge" style="display:none;background:var(--warning);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px"></span></button>
       <button class="tab-btn" id="tab-balances" onclick="switchTab('balances')">💰 Soldes</button>
       <button class="tab-btn" id="tab-operators" onclick="switchTab('operators')">📡 Opérateurs</button>
+      <button class="tab-btn" id="tab-reconcile" onclick="switchTab('reconcile')">🔄 Réconciliation</button>
     </div>
 
     <!-- MARCHANDS -->
@@ -362,11 +363,14 @@
     document.getElementById('panel-withdrawals').style.display  = tab === 'withdrawals'  ? 'block' : 'none';
     document.getElementById('panel-balances').style.display     = tab === 'balances'     ? 'block' : 'none';
     document.getElementById('panel-operators').style.display    = tab === 'operators'    ? 'block' : 'none';
+    document.getElementById('panel-reconcile').style.display   = tab === 'reconcile'   ? 'block' : 'none';
     document.getElementById('tab-merchants').classList.toggle('active',    tab === 'merchants');
     document.getElementById('tab-transactions').classList.toggle('active', tab === 'transactions');
     document.getElementById('tab-withdrawals').classList.toggle('active',  tab === 'withdrawals');
     document.getElementById('tab-balances').classList.toggle('active',     tab === 'balances');
     document.getElementById('tab-operators').classList.toggle('active',    tab === 'operators');
+    document.getElementById('tab-reconcile').classList.toggle('active',   tab === 'reconcile');
+    if (tab === 'reconcile') loadReconciliationLogs();
     if (tab === 'transactions') {
       const s = document.getElementById('tx-search');
       if (s) s.value = '';
@@ -931,6 +935,70 @@
     }
   }
 
+  async function runReconciliation() {
+    const btn = document.getElementById('btn-reconcile');
+    const result = document.getElementById('reconcile-result');
+    btn.disabled = true;
+    btn.textContent = 'En cours...';
+    result.style.display = 'none';
+
+    try {
+      const res = await fetch(API + '/admin/reconcile', {
+        headers: { 'x-admin-key': adminKey }
+      });
+      const data = await res.json();
+
+      result.style.display = 'block';
+      if (data.totalFixed === 0) {
+        result.innerHTML = '<div style="color:var(--success)">✅ Tout est à jour — ' + data.totalChecked + ' transaction(s) vérifiée(s), aucune correction nécessaire.</div>';
+      } else {
+        const rows = (data.fixed || []).map(f =>
+          '<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">' +
+          f.type + ' · ' + f.id.substring(0,12) + '... · ' +
+          f.oldStatus + ' → <strong>' + f.newStatus + '</strong> · ' +
+          f.amount + ' ' + f.currency + ' · ' + f.correspondent +
+          '</div>'
+        ).join('');
+        result.innerHTML = '<div style="color:var(--warning);margin-bottom:8px">⚡ ' + data.totalFixed + ' transaction(s) réconciliée(s) sur ' + data.totalChecked + ' vérifiée(s)</div>' + rows;
+      }
+      loadReconciliationLogs();
+    } catch (err) {
+      result.style.display = 'block';
+      result.innerHTML = '<div style="color:var(--danger)">Erreur : ' + err.message + '</div>';
+    }
+
+    btn.disabled = false;
+    btn.textContent = '▶ Lancer maintenant';
+  }
+
+  async function loadReconciliationLogs() {
+    const el = document.getElementById('reconcile-logs-body');
+    try {
+      const res = await fetch(API + '/admin/reconciliation-logs', {
+        headers: { 'x-admin-key': adminKey }
+      });
+      const data = await res.json();
+      if (!data.success || data.logs.length === 0) {
+        el.innerHTML = '<div class="empty">Aucun log de réconciliation</div>';
+        return;
+      }
+      const rows = data.logs.map(l => {
+        const date = new Date(l.createdAt).toLocaleDateString('fr-FR') + ' ' +
+                     new Date(l.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        const badge = l.triggeredBy === 'cron'
+          ? '<span style="font-size:10px;background:#e8f0fe;color:var(--blue);padding:2px 6px;border-radius:4px">AUTO</span>'
+          : '<span style="font-size:10px;background:#e8f7f0;color:var(--success);padding:2px 6px;border-radius:4px">MANUEL</span>';
+        const fixed = l.totalFixed > 0
+          ? '<span style="color:var(--warning);font-weight:600">' + l.totalFixed + ' corrigée(s)</span>'
+          : '<span style="color:var(--muted)">Aucune correction</span>';
+        return '<tr><td>' + date + '</td><td>' + badge + '</td><td>' + l.totalChecked + ' vérifiées</td><td>' + fixed + '</td></tr>';
+      }).join('');
+      el.innerHTML = '<table><thead><tr><th>Date</th><th>Type</th><th>Vérifiées</th><th>Résultat</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    } catch (err) {
+      el.innerHTML = '<div class="empty" style="color:var(--danger)">Erreur : ' + err.message + '</div>';
+    }
+  }
+
   function closeModal() {
     document.getElementById('modal').style.display = 'none';
     selectedMerchant = null;
@@ -1113,6 +1181,34 @@
   }
 
 </script>
+
+    <!-- PANEL RECONCILIATION -->
+    <div id="panel-reconcile" style="display:none">
+      <div class="table-card" style="margin-bottom:16px">
+        <div class="table-header">
+          <div>
+            <div class="table-title">🔄 Réconciliation automatique</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Vérifie les transactions INITIATED depuis plus de 5 minutes et les synchronise avec PawaPay</div>
+          </div>
+          <button onclick="runReconciliation()" id="btn-reconcile"
+            style="padding:7px 16px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)">
+            ▶ Lancer maintenant
+          </button>
+        </div>
+        <div id="reconcile-result" style="padding:12px 16px;display:none"></div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Historique des réconciliations</div>
+          <div style="font-size:12px;color:var(--muted)">Cron automatique toutes les 5 minutes</div>
+        </div>
+        <div id="reconcile-logs-body">
+          <div class="empty"><div class="spinner"></div><br/>Chargement...</div>
+        </div>
+      </div>
+    </div>
+
 </body>
 </html>
 
