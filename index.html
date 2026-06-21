@@ -992,7 +992,7 @@
           <div class="api-key-card">
             <div class="api-key-row">
               <span class="api-key-label">URL callback</span>
-              <span class="api-key-val">https://votre-backend.vercel.app/api/webhooks/pawapay</span>
+              <span class="api-key-val" id="webhook-url-display" style="color:var(--text-muted);font-style:italic">Non configurée — allez dans Paramètres pour la définir</span>
               <button class="copy-btn">Copier</button>
             </div>
             <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
@@ -1341,6 +1341,19 @@
     initChartLabels();
     loadStats();
     loadSettings(merchant);
+    // Afficher l'URL webhook dans le bloc Clés API
+    const whDisplay = document.getElementById('webhook-url-display');
+    if (whDisplay) {
+      if (merchant.webhookUrl) {
+        whDisplay.textContent = merchant.webhookUrl;
+        whDisplay.style.color = 'inherit';
+        whDisplay.style.fontStyle = 'normal';
+      } else {
+        whDisplay.textContent = 'Non configurée — allez dans Paramètres pour la définir';
+        whDisplay.style.color = 'var(--text-muted)';
+        whDisplay.style.fontStyle = 'italic';
+      }
+    }
   }
 
   // ── SETTINGS ─────────────────────────────────────────────────
