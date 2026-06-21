@@ -1068,7 +1068,7 @@
               <span class="endpoint-desc">Initier une collecte</span>
             </div>
             <div class="endpoint-body">
-              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://api.sandbox.pawapay.cloud/deposits"</span>, {
+              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://ndsgpay-backend.vercel.app/api/pay/deposits"</span>, {
   method: <span class="c-green">"POST"</span>,
   headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">NDSGPAY_SECRET_KEY</span>}`</span> },
   body: JSON.stringify({
@@ -1091,7 +1091,7 @@
               <span class="endpoint-desc">Envoyer des fonds</span>
             </div>
             <div class="endpoint-body">
-              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://api.sandbox.pawapay.cloud/payouts"</span>, {
+              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://ndsgpay-backend.vercel.app/api/pay/payouts"</span>, {
   method: <span class="c-green">"POST"</span>,
   headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">NDSGPAY_SECRET_KEY</span>}`</span> },
   body: JSON.stringify({
