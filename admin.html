@@ -160,6 +160,7 @@
       <button class="tab-btn" id="tab-transactions" onclick="switchTab('transactions')">💳 Transactions</button>
       <button class="tab-btn" id="tab-withdrawals" onclick="switchTab('withdrawals')">🏦 Virements <span id="pending-badge" style="display:none;background:var(--warning);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px"></span></button>
       <button class="tab-btn" id="tab-balances" onclick="switchTab('balances')">💰 Soldes</button>
+      <button class="tab-btn" id="tab-operators" onclick="switchTab('operators')">📡 Opérateurs</button>
     </div>
 
     <!-- MARCHANDS -->
@@ -338,10 +339,12 @@
     document.getElementById('panel-transactions').style.display = tab === 'transactions' ? 'block' : 'none';
     document.getElementById('panel-withdrawals').style.display  = tab === 'withdrawals'  ? 'block' : 'none';
     document.getElementById('panel-balances').style.display     = tab === 'balances'     ? 'block' : 'none';
+    document.getElementById('panel-operators').style.display    = tab === 'operators'    ? 'block' : 'none';
     document.getElementById('tab-merchants').classList.toggle('active',    tab === 'merchants');
     document.getElementById('tab-transactions').classList.toggle('active', tab === 'transactions');
     document.getElementById('tab-withdrawals').classList.toggle('active',  tab === 'withdrawals');
     document.getElementById('tab-balances').classList.toggle('active',     tab === 'balances');
+    document.getElementById('tab-operators').classList.toggle('active',    tab === 'operators');
     if (tab === 'transactions') {
       const s = document.getElementById('tx-search');
       if (s) s.value = '';
