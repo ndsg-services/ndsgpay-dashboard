@@ -1086,11 +1086,13 @@
         const balance = w.balance || w.amount || '0';
         const flag = COUNTRY_FLAGS[country] || '🌍';
         const balNum = parseFloat(balance);
-        const color = balNum > 0 ? 'var(--success)' : 'var(--muted)';
+        const isNA = balance === 'N/A' || isNaN(balNum);
+        const color = isNA ? 'var(--muted)' : (balNum > 0 ? 'var(--success)' : 'var(--muted)');
+        const balDisplay = isNA ? '— (non disponible)' : new Intl.NumberFormat('fr-FR').format(balNum) + ' ' + currency;
         return `<tr>
           <td>${flag} ${country}</td>
           <td>${currency}</td>
-          <td style="font-weight:600;color:${color}">${new Intl.NumberFormat('fr-FR').format(balNum)} ${currency}</td>
+          <td style="font-weight:600;color:${color}">${balDisplay}</td>
         </tr>`;
       }).join('');
 
