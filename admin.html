@@ -1103,7 +1103,11 @@
       </table>`;
 
     } catch (err) {
-      el.innerHTML = `<div class="empty" style="padding:12px;color:var(--danger)">Erreur : ${err.message}</div>`;
+      // Vérifier si c'est une erreur PawaPay connue
+      const msg = err.message.includes('500')
+        ? 'Endpoint PawaPay temporairement indisponible. Consultez votre dashboard PawaPay pour les soldes.'
+        : err.message;
+      el.innerHTML = `<div class="empty" style="padding:12px;color:var(--warning)">⚠️ ${msg} <a href="https://dashboard.pawapay.io" target="_blank" style="color:var(--blue);margin-left:8px">Ouvrir PawaPay →</a></div>`;
     }
     btn.disabled = false;
   }
