@@ -342,7 +342,11 @@
     document.getElementById('tab-transactions').classList.toggle('active', tab === 'transactions');
     document.getElementById('tab-withdrawals').classList.toggle('active',  tab === 'withdrawals');
     document.getElementById('tab-balances').classList.toggle('active',     tab === 'balances');
-    if (tab === 'transactions') loadTransactions('all', 'all');
+    if (tab === 'transactions') {
+      const s = document.getElementById('tx-search');
+      if (s) s.value = '';
+      loadTransactions('all', 'all');
+    }
     if (tab === 'withdrawals')  loadWithdrawals('all');
     if (tab === 'balances')     loadBalances();
   }
