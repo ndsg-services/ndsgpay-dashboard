@@ -165,16 +165,16 @@
     <!-- MARCHANDS -->
     <div id="panel-merchants">
       <div class="table-card">
-        <div class="table-header" style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap">
+        <div class="table-header" style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto">
           <div class="table-title" style="white-space:nowrap;flex-shrink:0">Toutes les transactions</div>
-          <div style="position:relative;width:180px;flex-shrink:0">
+          <div style="position:relative;width:170px;flex-shrink:0">
             <input type="text" id="tx-search"
               placeholder="ID ou numéro..."
               oninput="applyFilters()"
               style="width:100%;padding:5px 10px 5px 26px;border:1px solid var(--border-strong);border-radius:8px;font-size:11px;font-family:var(--sans);outline:none;background:#fff" />
             <span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)">🔍</span>
           </div>
-          <div class="filters" style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap;overflow-x:auto">
+          <div class="filters" style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap">
             <button class="filter-btn active" onclick="filterTx(this,'all','all')">Toutes</button>
             <button class="filter-btn" onclick="filterTx(this,'deposit','all')">Dépôts</button>
             <button class="filter-btn" onclick="filterTx(this,'payout','all')">Payouts</button>
