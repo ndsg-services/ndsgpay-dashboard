@@ -244,38 +244,41 @@
   }
 
   async function doLogin(btn) {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    if (!email || !password) return;
+    const sk = document.getElementById('secret-key').value.trim();
+    if (!sk) return;
+    if (!sk.startsWith('sk_live_') && !sk.startsWith('sk_test_')) {
+      document.getElementById('login-error').style.display = 'block';
+      document.getElementById('login-error').textContent = 'Clé invalide — doit commencer par sk_live_';
+      return;
+    }
 
-    btn.innerHTML = '<div class="spinner"></div> Connexion...';
+    btn.innerHTML = '<div class="spinner"></div> Vérification...';
     btn.disabled = true;
 
     try {
-      const res = await fetch(`${API}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+      // Vérifier la clé en appelant /merchant/settings
+      const res = await fetch(`${API}/merchant/settings`, {
+        headers: { 'Authorization': `Bearer ${sk}` }
       });
       const data = await res.json();
 
       if (!data.success) {
         document.getElementById('login-error').style.display = 'block';
-        document.getElementById('login-error').textContent = data.error || 'Erreur de connexion';
-        btn.innerHTML = 'Se connecter';
+        document.getElementById('login-error').textContent = data.error || 'Clé API invalide';
+        btn.innerHTML = 'Continuer';
         btn.disabled = false;
         return;
       }
 
-      jwtToken = data.token;
+      jwtToken = sk; // Utiliser sk_ directement pour les appels API
       document.getElementById('login-card').style.display = 'none';
       document.getElementById('payment-card').style.display = 'block';
-      onCorrespondentChange(); // initialiser hint et devise
+      onCorrespondentChange();
 
     } catch (err) {
       document.getElementById('login-error').style.display = 'block';
-      document.getElementById('login-error').textContent = 'Erreur reseau';
-      btn.innerHTML = 'Se connecter';
+      document.getElementById('login-error').textContent = 'Erreur réseau';
+      btn.innerHTML = 'Continuer';
       btn.disabled = false;
     }
   }
@@ -422,7 +425,7 @@
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
-      doLogin(document.querySelector('.btn'));
+      doLogin(document.querySelector('#login-card .btn'));
     }
   });
 </script>
