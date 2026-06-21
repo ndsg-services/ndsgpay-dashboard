@@ -760,12 +760,22 @@
           <div>
             <div style="font-size:10px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Collecte %</div>
             <input type="number" id="exc-deposit" step="0.01" min="0" max="20" placeholder="ex: 2.25"
-              style="width:80px;padding:7px 10px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none" />
+              style="width:75px;padding:7px 8px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none" />
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">+ Fixe dep.</div>
+            <input type="number" id="exc-deposit-fixed" step="1" min="0" placeholder="ex: 0"
+              style="width:75px;padding:7px 8px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none" />
           </div>
           <div>
             <div style="font-size:10px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Payout %</div>
             <input type="number" id="exc-payout" step="0.01" min="0" max="20" placeholder="ex: 1.30"
-              style="width:80px;padding:7px 10px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none" />
+              style="width:75px;padding:7px 8px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none" />
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">+ Fixe pay.</div>
+            <input type="number" id="exc-payout-fixed" step="1" min="0" placeholder="ex: 60"
+              style="width:75px;padding:7px 8px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--sans);background:#fff;outline:none" />
           </div>
           <button onclick="addCorrespondentFee('${m.id}')"
             style="padding:7px 14px;border-radius:7px;background:var(--success);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans);white-space:nowrap">
@@ -856,9 +866,13 @@
     }
 
     try {
+      const depositFixedVal = document.getElementById('exc-deposit-fixed').value;
+      const payoutFixedVal  = document.getElementById('exc-payout-fixed').value;
       const body = { correspondent };
-      if (depositFeeVal) body.depositFee = parseFloat(depositFeeVal) / 100;
-      if (payoutFeeVal)  body.payoutFee  = parseFloat(payoutFeeVal)  / 100;
+      if (depositFeeVal)   body.depositFee      = parseFloat(depositFeeVal) / 100;
+      if (depositFixedVal) body.depositFeeFixed = parseFloat(depositFixedVal);
+      if (payoutFeeVal)    body.payoutFee       = parseFloat(payoutFeeVal)  / 100;
+      if (payoutFixedVal)  body.payoutFeeFixed  = parseFloat(payoutFixedVal);
 
       const res = await fetch(API + '/admin/merchants/' + merchantId + '/correspondent-fees', {
         method: 'POST',
