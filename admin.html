@@ -971,6 +971,48 @@
     btn.textContent = '▶ Lancer maintenant';
   }
 
+  async function exportReconciliationCSV() {
+    try {
+      const res = await fetch(API + '/admin/reconciliation-logs?limit=1000', {
+        headers: { 'x-admin-key': adminKey }
+      });
+      const data = await res.json();
+      if (!data.success || data.logs.length === 0) {
+        alert('Aucun log à exporter');
+        return;
+      }
+
+      const rows = ['Date,Type,Verifiees,Corrigees,ID Transaction,TypeTx,AncienStatut,NouveauStatut,Montant,Devise,Correspondent'];
+
+      data.logs.forEach(l => {
+        const date = new Date(l.createdAt).toLocaleString('fr-FR');
+        const details = Array.isArray(l.details) ? l.details : [];
+
+        if (details.length === 0) {
+          rows.push([date, l.triggeredBy, l.totalChecked, l.totalFixed, '', '', '', '', '', '', ''].join(','));
+        } else {
+          details.forEach(f => {
+            rows.push([
+              date, l.triggeredBy, l.totalChecked, l.totalFixed,
+              f.id, f.type, f.oldStatus, f.newStatus,
+              f.amount, f.currency, f.correspondent
+            ].join(','));
+          });
+        }
+      });
+
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reconciliation_' + new Date().toISOString().split('T')[0] + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Erreur export : ' + err.message);
+    }
+  }
+
   async function loadReconciliationLogs() {
     const el = document.getElementById('reconcile-logs-body');
     try {
@@ -1201,7 +1243,13 @@
       <div class="table-card">
         <div class="table-header">
           <div class="table-title">Historique des réconciliations</div>
-          <div style="font-size:12px;color:var(--muted)">Cron automatique toutes les 5 minutes</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:12px;color:var(--muted)">Cron automatique toutes les 5 minutes</div>
+            <button onclick="exportReconciliationCSV()"
+              style="padding:5px 12px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)">
+              ⬇ Export CSV
+            </button>
+          </div>
         </div>
         <div id="reconcile-logs-body">
           <div class="empty"><div class="spinner"></div><br/>Chargement...</div>
