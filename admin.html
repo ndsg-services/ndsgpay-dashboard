@@ -166,29 +166,27 @@
     <div id="panel-merchants">
       <div class="table-card">
         <div class="table-header" style="flex-direction:column;align-items:stretch;gap:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <div class="table-title">Toutes les transactions</div>
-            <div class="filters" style="flex-wrap:wrap;gap:6px;flex:1;justify-content:flex-end">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div class="table-title" style="white-space:nowrap">Toutes les transactions</div>
+            <div style="position:relative;width:220px">
+              <input type="text" id="tx-search"
+                placeholder="ID ou numéro..."
+                oninput="applyFilters()"
+                style="width:100%;padding:5px 12px 5px 28px;border:1px solid var(--border-strong);border-radius:8px;font-size:12px;font-family:var(--sans);outline:none;background:#fff" />
+              <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted)">🔍</span>
+            </div>
+            <span id="search-count" style="font-size:11px;color:var(--muted)"></span>
+            <div class="filters" style="flex-wrap:wrap;gap:6px;margin-left:auto">
               <button class="filter-btn active" onclick="filterTx(this,'all','all')">Toutes</button>
               <button class="filter-btn" onclick="filterTx(this,'deposit','all')">Dépôts</button>
               <button class="filter-btn" onclick="filterTx(this,'payout','all')">Payouts</button>
               <button class="filter-btn" onclick="filterTx(this,'all','COMPLETED')">Réussies</button>
               <button class="filter-btn" onclick="filterTx(this,'all','FAILED')">Échouées</button>
-              <select id="merchant-filter" onchange="applyFilters()" style="padding:6px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:12px;font-family:var(--sans);background:#fff;cursor:pointer;outline:none">
+              <select id="merchant-filter" onchange="applyFilters()" style="padding:5px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:12px;font-family:var(--sans);background:#fff;cursor:pointer;outline:none">
                 <option value="all">Tous les marchands</option>
               </select>
-              <button onclick="exportCSV()" style="padding:6px 14px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)">⬇ Export CSV</button>
+              <button onclick="exportCSV()" style="padding:5px 14px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)">⬇ Export CSV</button>
             </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div style="position:relative;flex:1;max-width:400px">
-              <input type="text" id="tx-search"
-                placeholder="Rechercher par ID transaction ou numéro de téléphone..."
-                oninput="applyFilters()"
-                style="width:100%;padding:7px 14px 7px 34px;border:1px solid var(--border-strong);border-radius:8px;font-size:12px;font-family:var(--sans);outline:none;background:#fff" />
-              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px">🔍</span>
-            </div>
-            <span id="search-count" style="font-size:12px;color:var(--muted)"></span>
           </div>
         </div>
         <div id="tx-table-body">
