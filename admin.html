@@ -455,14 +455,38 @@
       merchants.map(m => `<option value="${m}" ${m === current ? 'selected' : ''}>${m}</option>`).join('');
   }
 
-  function applyMerchantFilter() {
-    const filter = document.getElementById('merchant-filter').value;
-    currentMerchantFilter = filter;
-    const filtered = filter === 'all'
-      ? allTransactions
-      : allTransactions.filter(tx => tx.merchant?.name === filter);
+  function applyFilters() {
+    const merchantFilter = document.getElementById('merchant-filter').value;
+    const searchVal = (document.getElementById('tx-search')?.value || '').toLowerCase().trim();
+    currentMerchantFilter = merchantFilter;
+
+    let filtered = allTransactions;
+
+    // Filtre marchand
+    if (merchantFilter !== 'all') {
+      filtered = filtered.filter(tx => tx.merchant?.name === merchantFilter);
+    }
+
+    // Filtre recherche — ID transaction ou numéro de téléphone
+    if (searchVal) {
+      filtered = filtered.filter(tx =>
+        (tx.txId || '').toLowerCase().includes(searchVal) ||
+        (tx.msisdn || '').toLowerCase().includes(searchVal)
+      );
+    }
+
+    // Afficher le compte
+    const countEl = document.getElementById('search-count');
+    if (countEl) {
+      countEl.textContent = searchVal || merchantFilter !== 'all'
+        ? filtered.length + ' résultat' + (filtered.length > 1 ? 's' : '')
+        : '';
+    }
+
     renderTransactions(filtered);
   }
+
+  function applyMerchantFilter() { applyFilters(); }
 
   function filterTx(btn, type, status) {
     document.querySelectorAll('#panel-transactions .filter-btn').forEach(b => b.classList.remove('active'));
@@ -476,7 +500,7 @@
 
     if (data.length === 0) { alert('Aucune transaction à exporter'); return; }
 
-    const headers = ['ID', 'Type', 'Marchand', 'Email', 'Opérateur', 'Numéro', 'Montant (XAF)', 'Statut', 'Date'];
+    const headers = ['ID', 'Type', 'Marchand', 'Email', 'Opérateur', 'Numéro', 'Montant', 'Devise', 'Statut', 'Date'];
     const rows = data.map(tx => [
       tx.txId,
       tx.type === 'deposit' ? 'Dépôt' : 'Payout',
@@ -485,6 +509,7 @@
       tx.correspondent,
       tx.msisdn,
       tx.amount,
+      tx.currency || 'XAF',
       tx.status,
       new Date(tx.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
     ]);
@@ -512,7 +537,7 @@
         <td><strong>${tx.merchant?.name || '—'}</strong><br/><span class="td-muted" style="font-size:11px">${tx.merchant?.email || ''}</span></td>
         <td>${tx.correspondent}</td>
         <td class="td-muted">${tx.msisdn}</td>
-        <td style="font-weight:500">${formatXAF(tx.amount)} XAF</td>
+        <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(tx.amount)} ${tx.currency || 'XAF'}</td>
         <td><span class="badge ${tx.status === 'COMPLETED' ? 'active' : tx.status === 'INITIATED' ? '' : 'pending'}" style="${tx.status === 'FAILED' ? 'background:var(--danger-bg);color:var(--danger)' : ''}">${tx.status}</span></td>
         <td class="td-muted">${new Date(tx.createdAt).toLocaleDateString('fr-FR')} ${new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</td>
       </tr>
