@@ -1049,11 +1049,11 @@
           <div class="api-section-title">Base URL</div>
           <div class="endpoint-card">
             <div class="endpoint-body">
-              <pre><span class="c-gray2"># Sandbox</span>
-<span class="c-green">https://api.sandbox.pawapay.cloud</span>
+              <pre><span class="c-gray2"># Production NDSGPay</span>
+<span class="c-green">https://ndsgpay-backend.vercel.app/api</span>
 
-<span class="c-gray2"># Production (après go-live)</span>
-<span class="c-green">https://api.pawapay.io</span></pre>
+<span class="c-gray2"># Authentification : utilisez votre clé secrète NDSGPay (sk_live_)</span>
+<span class="c-gray2"># NE PAS utiliser un token PawaPay — NDSGPay gère PawaPay pour vous</span></pre>
             </div>
           </div>
         </div>
@@ -1070,7 +1070,7 @@
             <div class="endpoint-body">
               <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://api.sandbox.pawapay.cloud/deposits"</span>, {
   method: <span class="c-green">"POST"</span>,
-  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">API_TOKEN</span>}`</span> },
+  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">NDSGPAY_SECRET_KEY</span>}`</span> },
   body: JSON.stringify({
     depositId: <span class="c-yellow">uuid()</span>,          <span class="c-gray2">// ID unique de votre côté</span>
     amount: <span class="c-yellow">"5000"</span>,              <span class="c-gray2">// en XAF</span>
@@ -1093,7 +1093,7 @@
             <div class="endpoint-body">
               <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://api.sandbox.pawapay.cloud/payouts"</span>, {
   method: <span class="c-green">"POST"</span>,
-  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">API_TOKEN</span>}`</span> },
+  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">NDSGPAY_SECRET_KEY</span>}`</span> },
   body: JSON.stringify({
     payoutId: <span class="c-yellow">uuid()</span>,
     amount: <span class="c-yellow">"10000"</span>,
