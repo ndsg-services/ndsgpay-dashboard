@@ -1067,7 +1067,8 @@
       };
 
       // Format PawaPay wallets/balances retourne un tableau
-      const items = Array.isArray(wallets) ? wallets : (wallets.balances || wallets.wallets || []);
+      // Format PawaPay /wallet-balances : [{ country, balance, currency, mno }]
+      const items = Array.isArray(wallets) ? wallets : [];
 
       if (items.length === 0) {
         el.innerHTML = '<div class="empty" style="padding:12px">Aucun wallet trouvé</div>';
