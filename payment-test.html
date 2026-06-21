@@ -82,20 +82,17 @@
 
   <!-- Login -->
   <div id="login-card" class="card">
-    <div class="card-title"><div class="dot" style="background:var(--blue)"></div>Connexion NDSGPay</div>
+    <div class="card-title"><div class="dot" style="background:var(--blue)"></div>Authentification NDSGPay</div>
     <div class="form-group">
-      <label class="form-label">Email</label>
-      <input type="email" class="form-input" id="email" value="support@ndsgservices.com" />
+      <label class="form-label">Clé secrète API</label>
+      <input type="password" class="form-input" id="secret-key" placeholder="sk_live_••••••••••••••••••••••••" autocomplete="off" />
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Disponible dans votre dashboard NDSGPay → Clés API</div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Mot de passe</label>
-      <input type="password" class="form-input" id="password" placeholder="••••••••" />
-    </div>
-    <button class="btn" onclick="doLogin(this)">Se connecter</button>
+    <button class="btn" onclick="doLogin(this)">Continuer</button>
     <div id="login-error" style="display:none;font-size:12px;color:var(--danger);margin-top:10px;text-align:center"></div>
   </div>
 
-  <!-- Paiement -->
+  <!-- PAYMENT -->
   <div id="payment-card" class="card" style="display:none">
     <div class="card-title"><div class="dot" style="background:var(--success)"></div>Choisir le type d'operation</div>
     <div style="display:flex;gap:10px;margin-bottom:20px">
