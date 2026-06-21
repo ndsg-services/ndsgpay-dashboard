@@ -987,19 +987,21 @@
       data.logs.forEach(l => {
         const date = new Date(l.createdAt).toLocaleString('fr-FR');
         const details = Array.isArray(l.details) ? l.details : [];
-
-        if (details.length === 0) {
-          rows.push([date, l.triggeredBy, l.totalChecked, l.totalFixed, '', '', '', '', '', '', ''].join(','));
-        } else {
-          details.forEach(f => {
-            rows.push([
-              date, l.triggeredBy, l.totalChecked, l.totalFixed,
-              f.id, f.type, f.oldStatus, f.newStatus,
-              f.amount, f.currency, f.correspondent
-            ].join(','));
-          });
-        }
+        // N'exporter que les logs avec des corrections
+        if (details.length === 0) return;
+        details.forEach(f => {
+          rows.push([
+            date, l.triggeredBy, l.totalChecked, l.totalFixed,
+            f.id, f.type, f.oldStatus, f.newStatus,
+            f.amount, f.currency, f.correspondent
+          ].join(','));
+        });
       });
+
+      if (rows.length === 1) {
+        alert('Aucune correction à exporter pour le moment.');
+        return;
+      }
 
       const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
