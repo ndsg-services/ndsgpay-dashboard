@@ -1070,7 +1070,7 @@
             <div class="endpoint-body">
               <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://ndsgpay-backend.vercel.app/api/pay/deposits"</span>, {
   method: <span class="c-green">"POST"</span>,
-  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">NDSGPAY_SECRET_KEY</span>}`</span> },
+  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">votre_sk_live_xxx</span>}`</span> },
   body: JSON.stringify({
     depositId: <span class="c-yellow">uuid()</span>,          <span class="c-gray2">// ID unique de votre côté</span>
     amount: <span class="c-yellow">"5000"</span>,              <span class="c-gray2">// en XAF</span>
@@ -1093,7 +1093,7 @@
             <div class="endpoint-body">
               <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://ndsgpay-backend.vercel.app/api/pay/payouts"</span>, {
   method: <span class="c-green">"POST"</span>,
-  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">NDSGPAY_SECRET_KEY</span>}`</span> },
+  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">votre_sk_live_xxx</span>}`</span> },
   body: JSON.stringify({
     payoutId: <span class="c-yellow">uuid()</span>,
     amount: <span class="c-yellow">"10000"</span>,
