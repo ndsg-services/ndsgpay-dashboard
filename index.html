@@ -1319,15 +1319,23 @@
       const keyEl = document.getElementById('pub-key');
       const secEl = document.getElementById('sec-key');
       const prodLabel = document.getElementById('api-env-label');
-      const pk = merchant.publicKey  || ('pk_test_' + merchant.apiKey);
-      const sk = merchant.secretKey  || ('sk_test_' + merchant.apiKey);
-      if (keyEl) keyEl.textContent = pk;
-      if (secEl) {
-        secEl.textContent = sk.substring(0, 12) + '••••••••••••••••••••••••••••••••••••••••••••••••••';
-        secEl._full = sk;
-        secEl._revealed = false;
+
+      if (!merchant.publicKey || !merchant.secretKey) {
+        // Cles pas encore generees
+        if (keyEl) keyEl.textContent = '— Cliquez sur "Régénérer les clés" pour générer vos clés API';
+        if (secEl) { secEl.textContent = '—'; secEl._full = null; secEl._revealed = false; }
+        if (prodLabel) prodLabel.textContent = 'Clés non générées';
+      } else {
+        const pk = merchant.publicKey;
+        const sk = merchant.secretKey;
+        if (keyEl) keyEl.textContent = pk;
+        if (secEl) {
+          secEl.textContent = sk.substring(0, 12) + '••••••••••••••••••••••••••••••••••••••••••••••••••';
+          secEl._full = sk;
+          secEl._revealed = false;
+        }
+        if (prodLabel) prodLabel.textContent = merchant.isActive ? 'Clés Production' : 'Clés Sandbox';
       }
-      if (prodLabel) prodLabel.textContent = merchant.isActive ? 'Cles Production' : 'Cles Sandbox';
     }
 
     initChartLabels();
