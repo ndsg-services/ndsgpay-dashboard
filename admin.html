@@ -165,6 +165,23 @@
     <!-- MARCHANDS -->
     <div id="panel-merchants">
       <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Marchands NDSGPay</div>
+          <div class="filters">
+            <button class="filter-btn active" onclick="filterMerchants(this,'all')">Tous</button>
+            <button class="filter-btn" onclick="filterMerchants(this,'pending')">En attente</button>
+            <button class="filter-btn" onclick="filterMerchants(this,'active')">Actifs</button>
+          </div>
+        </div>
+        <div id="table-body">
+          <div class="empty"><div class="spinner"></div><br/>Chargement...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div id="panel-transactions" style="display:none">
+      <div class="table-card">
         <div class="table-header" style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto">
           <div class="table-title" style="white-space:nowrap;flex-shrink:0">Toutes les transactions</div>
           <div style="position:relative;width:170px;flex-shrink:0">
