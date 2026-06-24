@@ -152,6 +152,7 @@
       <div class="kpi"><div class="kpi-label">En attente</div><div class="kpi-value" id="kpi-pending">—</div><div class="kpi-sub">À valider</div></div>
       <div class="kpi"><div class="kpi-label">Volume total traité</div><div class="kpi-value" id="kpi-volume">—</div><div class="kpi-sub">XAF</div></div>
       <div class="kpi" style="border:1.5px solid var(--blue);background:var(--blue-light)"><div class="kpi-label" style="color:var(--blue)">Marge nette NDSGPay</div><div class="kpi-value" id="kpi-fees" style="color:var(--blue)">—</div><div class="kpi-sub" id="kpi-fees-detail">Frais marchands - Coût PawaPay</div></div>
+      <div class="kpi"><div class="kpi-label">Taux de succès</div><div class="kpi-value" id="admin-success-rate">—</div><div class="kpi-sub" id="admin-success-note">Toutes transactions</div></div>
     </div>
 
     <!-- TABS -->
@@ -472,7 +473,7 @@
 
   async function loadAdminSuccessRate() {
     try {
-      const res = await fetch(API + '/admin/stats', { headers: { 'x-admin-key': adminKey } });
+      const res = await fetch(API + '/admin/public-stats', { headers: { 'x-admin-key': adminKey } });
       const data = await res.json();
       if (!data.success) return;
 
