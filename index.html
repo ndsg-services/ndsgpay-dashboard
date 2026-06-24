@@ -818,12 +818,12 @@
           <div class="kpi">
             <div class="kpi-label" data-i18n="kpi-vol">Volume total</div>
             <div class="kpi-value" id="kpi-volume">0 XAF</div>
-            <div class="kpi-delta neutral">— Depuis le début</div>
+            <div class="kpi-delta neutral" data-i18n="kpi-since-delta">— Depuis le début</div>
           </div>
           <div class="kpi">
             <div class="kpi-label" data-i18n="kpi-tx">Transactions</div>
             <div class="kpi-value" id="kpi-tx">0</div>
-            <div class="kpi-delta neutral">— En attente</div>
+            <div class="kpi-delta neutral" data-i18n="kpi-pending">— En attente</div>
           </div>
           <div class="kpi">
             <div class="kpi-label" data-i18n="kpi-rate">Taux de succès</div>
@@ -867,7 +867,7 @@
         <div class="table-card">
           <div class="table-header">
             <div class="table-title" data-i18n="table-recent">Dernières transactions</div>
-            <button class="btn-sm" onclick="showPanel('transactions')">Voir tout</button>
+            <button class="btn-sm" onclick="showPanel('transactions')" data-i18n="btn-see-all">Voir tout</button>
           </div>
           <div id="recent-tx-body">
             <div class="empty-state">
@@ -1024,7 +1024,7 @@
               <thead>
                 <tr>
                   <th>Pays</th>
-                  <th>Opérateur</th>
+                  <th data-i18n="col-operator">Opérateur</th>
                   <th>Code correspondent</th>
                   <th>Devise</th>
                 </tr>
@@ -1406,7 +1406,17 @@
     "empty-tx": "Aucune transaction",
     "empty-withdraw": "Aucune demande de virement",
     "no-data": "Données insuffisantes",
-        "kpi-no-data": "Données insuffisantes"
+    "kpi-no-data": "Données insuffisantes",
+    "kpi-since-delta": "— Depuis le début",
+    "kpi-pending": "— En attente",
+    "kpi-balance-detail": "— Collecté — Frais — Payouts",
+    "btn-see-all": "Voir tout",
+    "col-type": "Type",
+    "col-operator": "Opérateur",
+    "col-number": "Numéro",
+    "col-amount": "Montant",
+    "col-status": "Statut",
+    "col-date": "Date"
   },
   "en": {
     "nav-sec-main": "Main",
@@ -1438,7 +1448,17 @@
     "empty-tx": "No transactions",
     "empty-withdraw": "No payout requests",
     "no-data": "Insufficient data",
-        "kpi-no-data": "Insufficient data"
+    "kpi-no-data": "Insufficient data",
+    "kpi-since-delta": "— All time",
+    "kpi-pending": "— Pending",
+    "kpi-balance-detail": "— Collected — Fees — Payouts",
+    "btn-see-all": "See all",
+    "col-type": "Type",
+    "col-operator": "Operator",
+    "col-number": "Number",
+    "col-amount": "Amount",
+    "col-status": "Status",
+    "col-date": "Date"
   }
 };
   let dashLang = localStorage.getItem('ndsgpayDashLang') || 'fr';
@@ -1777,7 +1797,7 @@
         </div>
         <table>
           <thead><tr>
-            <th>Pays</th><th>Opérateur</th><th>Devise</th><th>Collecté</th><th>Payout</th><th>Frais</th><th>Solde disponible</th>
+            <th>Pays</th><th data-i18n="col-operator">Opérateur</th><th>Devise</th><th>Collecté</th><th>Payout</th><th>Frais</th><th>Solde disponible</th>
           </tr></thead>
           <tbody>
             ${correspondents.map(corr => {
@@ -1839,7 +1859,7 @@
         </div>
         <table>
           <thead><tr>
-            <th>Pays</th><th>Opérateur</th><th>Total</th><th>Réussies</th><th>Échouées</th><th>Taux d'échec</th>
+            <th>Pays</th><th data-i18n="col-operator">Opérateur</th><th>Total</th><th>Réussies</th><th>Échouées</th><th>Taux d'échec</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -1900,19 +1920,20 @@
 
       if (all.length === 0) return; // Garder l'état vide par défaut
 
+      const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
       const statusBadge = s => {
-        if (s === 'COMPLETED') return '<span style="color:var(--success);font-size:11px;font-weight:500">✅ Réussie</span>';
-        if (s === 'FAILED')    return '<span style="color:var(--danger);font-size:11px;font-weight:500">❌ Échouée</span>';
-        return '<span style="color:var(--warning);font-size:11px;font-weight:500">⏳ En cours</span>';
+        if (s === 'COMPLETED') return `<span style="color:var(--success);font-size:11px;font-weight:500">✅ ${lang === 'en' ? 'Success' : 'Réussie'}</span>`;
+        if (s === 'FAILED')    return `<span style="color:var(--danger);font-size:11px;font-weight:500">❌ ${lang === 'en' ? 'Failed' : 'Échouée'}</span>`;
+        return `<span style="color:var(--warning);font-size:11px;font-weight:500">⏳ ${lang === 'en' ? 'Pending' : 'En cours'}</span>`;
       };
 
       el.innerHTML = `<table>
         <thead><tr>
-          <th>Type</th><th>Opérateur</th><th>Numéro</th><th>Montant</th><th>Statut</th><th>Date</th>
+          <th data-i18n="col-type">Type</th><th data-i18n="col-operator">Opérateur</th><th data-i18n="col-number">Numéro</th><th data-i18n="col-amount">Montant</th><th data-i18n="col-status">Statut</th><th data-i18n="col-date">Date</th>
         </tr></thead>
         <tbody>
           ${all.map(tx => `<tr>
-            <td>${tx.type === 'deposit' ? '📥' : '📤'} ${tx.type === 'deposit' ? 'Collecte' : 'Payout'}</td>
+            <td>${tx.type === 'deposit' ? '📥' : '📤'} ${tx.type === 'deposit' ? (lang === 'en' ? 'Collection' : 'Collecte') : 'Payout'}</td>
             <td style="font-size:11px;color:var(--text-muted)">${tx.correspondent || '—'}</td>
             <td style="font-size:11px">${tx.msisdn || '—'}</td>
             <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(tx.amount)} ${tx.currency || 'XAF'}</td>
@@ -1987,7 +2008,7 @@
       </div>
       <table>
         <thead><tr>
-          <th>ID</th><th>Type</th><th>Opérateur</th><th>Numéro</th><th>Montant</th><th>Statut</th><th>Date</th>
+          <th>ID</th><th data-i18n="col-type">Type</th><th data-i18n="col-operator">Opérateur</th><th data-i18n="col-number">Numéro</th><th data-i18n="col-amount">Montant</th><th data-i18n="col-status">Statut</th><th data-i18n="col-date">Date</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
@@ -2095,7 +2116,7 @@
       </div>
       <table>
         <thead><tr>
-          <th>ID</th><th>Montant</th><th>Banque</th><th>Titulaire</th><th>N° Compte</th><th>Statut</th><th>Demandé</th><th>Exécuté</th>
+          <th>ID</th><th data-i18n="col-amount">Montant</th><th>Banque</th><th>Titulaire</th><th>N° Compte</th><th data-i18n="col-status">Statut</th><th>Demandé</th><th>Exécuté</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
