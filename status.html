@@ -164,10 +164,21 @@
       const badge = document.getElementById('global-badge');
       const dot   = document.getElementById('global-dot');
       const status = document.getElementById('global-status');
-      if (rate >= 90 || data.totalTransactions === 0) {
+      // Le taux de succès est calculé sur completed / (completed + failed)
+      // On exclut les INITIATED qui ne sont pas encore résolus
+      const failures = data.failuresByCorrespondent || [];
+      const totalCompleted = failures.reduce((s, f) => s + f.completed, 0);
+      const totalFailed    = failures.reduce((s, f) => s + f.failed, 0);
+      const resolvedTotal  = totalCompleted + totalFailed;
+      const resolvedRate   = resolvedTotal > 0 ? Math.round((totalCompleted / resolvedTotal) * 100) : 100;
+
+      document.getElementById('stat-success').textContent =
+        resolvedTotal > 0 ? resolvedRate + '%' : '—';
+
+      if (resolvedRate >= 85 || resolvedTotal === 0) {
         badge.className = 'status-badge ok'; dot.className = 'status-dot dot-ok';
         status.textContent = 'Tous les systèmes opérationnels';
-      } else if (rate >= 70) {
+      } else if (resolvedRate >= 60) {
         badge.className = 'status-badge warn'; dot.className = 'status-dot dot-warn';
         status.textContent = 'Performance dégradée';
       } else {
@@ -182,12 +193,13 @@
       const rows = OPERATORS.map(op => {
         const f = failMap[op.code];
         let pill, rate = null;
-        if (!f) {
+        if (!f || (f.completed + f.failed) === 0) {
           pill = '<span class="pill pill-na">Aucune donnée</span>';
         } else {
-          rate = f.total > 0 ? Math.round((f.completed / f.total) * 100) : 100;
-          if (rate >= 90)      pill = `<span class="pill pill-ok">✅ ${rate}%</span>`;
-          else if (rate >= 70) pill = `<span class="pill pill-warn">⚠️ ${rate}%</span>`;
+          const resolved = f.completed + f.failed;
+          rate = Math.round((f.completed / resolved) * 100);
+          if (rate >= 85)      pill = `<span class="pill pill-ok">✅ ${rate}%</span>`;
+          else if (rate >= 60) pill = `<span class="pill pill-warn">⚠️ ${rate}%</span>`;
           else                 pill = `<span class="pill pill-down">❌ ${rate}%</span>`;
         }
         return `<div class="card-row">
