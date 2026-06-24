@@ -804,7 +804,7 @@
           <div class="kpi">
             <div class="kpi-label">Volume total</div>
             <div class="kpi-value" id="kpi-volume">0 XAF</div>
-            <div class="kpi-delta neutral">— Premier mois</div>
+            <div class="kpi-delta neutral">— Depuis le début</div>
           </div>
           <div class="kpi">
             <div class="kpi-label">Transactions</div>
@@ -921,12 +921,12 @@
       <div class="panel" id="panel-analytics">
         <div class="kpi-grid" style="margin-bottom:20px">
           <div class="kpi">
-            <div class="kpi-label">Collecte (mois)</div>
+            <div class="kpi-label">Collecte (total)</div>
             <div class="kpi-value" id="kpi-deposit-vol">0 XAF</div>
             <div class="kpi-note">Frais : 3% / tx</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Payout (mois)</div>
+            <div class="kpi-label">Payout (total)</div>
             <div class="kpi-value" id="kpi-payout-vol">0 XAF</div>
             <div class="kpi-note">Frais : 2% / tx</div>
           </div>
@@ -938,7 +938,7 @@
           <div class="kpi">
             <div class="kpi-label">Frais générés</div>
             <div class="kpi-value" id="kpi-fees-2">0 XAF</div>
-            <div class="kpi-note">Ce mois</div>
+            <div class="kpi-note">Depuis le début</div>
           </div>
         </div>
 
@@ -1557,6 +1557,9 @@
       updateKPI('kpi-payout-vol', formatAmount(s.payouts.volume, 'XAF'));
       updateKPI('kpi-rate-2', s.successRate !== null ? `${s.successRate}%` : '—');
       updateKPI('kpi-fees-2', formatAmount(s.fees, 'XAF'));
+
+      // Taux d'échec par opérateur
+      renderFailureStats(s);
 
       // Badge transactions
       const badge = document.querySelector('.nav-badge');
