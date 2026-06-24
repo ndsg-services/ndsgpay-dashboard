@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NDSGPay — Statut</title>
+  <style>
+    :root {
+      --bg: #f5f4f0; --surface: #fff; --border: #e8e4dc;
+      --text: #1a1a18; --muted: #8a8880; --blue: #1A5FB4;
+      --success: #2d9e6b; --warning: #d97706; --danger: #dc2626;
+      --sans: 'Inter', -apple-system, sans-serif;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); font-family:var(--sans); color:var(--text); min-height:100vh; }
+    .header { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; }
+    .logo { font-size:18px; font-weight:700; letter-spacing:-.5px; }
+    .logo span { color:var(--blue); }
+    .last-update { font-size:12px; color:var(--muted); }
+    .container { max-width:800px; margin:0 auto; padding:32px 16px; }
+    .hero { text-align:center; margin-bottom:40px; }
+    .status-badge { display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:50px; font-size:14px; font-weight:600; margin-bottom:12px; }
+    .status-badge.ok { background:#e8f7f0; color:var(--success); }
+    .status-badge.warn { background:#fef3c7; color:var(--warning); }
+    .status-badge.down { background:#fee2e2; color:var(--danger); }
+    .status-dot { width:10px; height:10px; border-radius:50%; }
+    .dot-ok { background:var(--success); animation: pulse-green 2s infinite; }
+    .dot-warn { background:var(--warning); }
+    .dot-down { background:var(--danger); animation: pulse-red 1s infinite; }
+    @keyframes pulse-green { 0%,100%{opacity:1} 50%{opacity:.5} }
+    @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .hero-title { font-size:28px; font-weight:700; margin-bottom:6px; }
+    .hero-sub { font-size:14px; color:var(--muted); }
+    .section-title { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:12px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; margin-bottom:12px; overflow:hidden; }
+    .card-row { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+    .card-row:last-child { border-bottom:none; }
+    .row-left { display:flex; align-items:center; gap:12px; }
+    .row-flag { font-size:18px; }
+    .row-name { font-size:14px; font-weight:500; }
+    .row-code { font-size:11px; color:var(--muted); font-family:monospace; }
+    .row-right { display:flex; align-items:center; gap:12px; }
+    .row-rate { font-size:13px; font-weight:600; }
+    .pill { font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; }
+    .pill-ok { background:#e8f7f0; color:var(--success); }
+    .pill-warn { background:#fef3c7; color:var(--warning); }
+    .pill-down { background:#fee2e2; color:var(--danger); }
+    .pill-na { background:#f0ede6; color:var(--muted); }
+    .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:32px; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; text-align:center; }
+    .stat-value { font-size:24px; font-weight:700; color:var(--blue); }
+    .stat-label { font-size:11px; color:var(--muted); margin-top:4px; }
+    .refresh-btn { display:block; margin:24px auto 0; padding:8px 20px; background:var(--blue); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; font-family:var(--sans); }
+    .refresh-btn:hover { background:#1448a0; }
+    .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; margin-right:6px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .footer { text-align:center; font-size:12px; color:var(--muted); margin-top:40px; padding-bottom:24px; }
+    @media(max-width:600px) { .stats-grid { grid-template-columns:1fr 1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">NDSG<span>Pay</span> <span style="font-size:13px;font-weight:400;color:var(--muted)">Statut</span></div>
+  <div class="last-update" id="last-update">Chargement...</div>
+</div>
+
+<div class="container">
+
+  <!-- Statut global -->
+  <div class="hero">
+    <div class="status-badge ok" id="global-badge">
+      <div class="status-dot dot-ok" id="global-dot"></div>
+      <span id="global-status">Tous les systèmes opérationnels</span>
+    </div>
+    <div class="hero-title">NDSGPay API</div>
+    <div class="hero-sub">api.ndsgpay.ndsgservices.com · Mis à jour toutes les 60 secondes</div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-success">—</div>
+      <div class="stat-label">Taux de succès</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-tx">—</div>
+      <div class="stat-label">Transactions totales</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-merchants">—</div>
+      <div class="stat-label">Marchands actifs</div>
+    </div>
+  </div>
+
+  <!-- Opérateurs -->
+  <div class="section-title">Opérateurs</div>
+  <div class="card" id="operators-card">
+    <div class="card-row" style="justify-content:center;color:var(--muted);font-size:13px">
+      <div class="spinner"></div> Chargement...
+    </div>
+  </div>
+
+  <button class="refresh-btn" onclick="loadStatus()" id="refresh-btn">🔄 Actualiser</button>
+
+  <div class="footer">
+    <a href="https://ndsgpay.ndsgservices.com" style="color:var(--blue);text-decoration:none">NDSGPay Dashboard</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:support@ndsgservices.com" style="color:var(--muted);text-decoration:none">support@ndsgservices.com</a>
+    &nbsp;·&nbsp; © 2026 NDSG Services
+  </div>
+</div>
+
+<script>
+  const API = 'https://ndsgpay-backend.vercel.app/api';
+
+  const OPERATORS = [
+    { code:'AIRTEL_GAB',        flag:'🇬🇦', name:'Airtel Money',   country:'Gabon'         },
+    { code:'MTN_MOMO_CMR',      flag:'🇨🇲', name:'MTN MoMo',       country:'Cameroun'      },
+    { code:'ORANGE_CMR',        flag:'🇨🇲', name:'Orange Money',   country:'Cameroun'      },
+    { code:'AIRTEL_COG',        flag:'🇨🇬', name:'Airtel Money',   country:'Congo'         },
+    { code:'MTN_MOMO_COG',      flag:'🇨🇬', name:'MTN MoMo',       country:'Congo'         },
+    { code:'MTN_MOMO_BEN',      flag:'🇧🇯', name:'MTN MoMo',       country:'Bénin'         },
+    { code:'MOOV_BEN',          flag:'🇧🇯', name:'Moov Money',     country:'Bénin'         },
+    { code:'MTN_MOMO_CIV',      flag:'🇨🇮', name:'MTN MoMo',       country:"Côte d'Ivoire" },
+    { code:'ORANGE_CIV',        flag:'🇨🇮', name:'Orange Money',   country:"Côte d'Ivoire" },
+    { code:'AIRTEL_COD',        flag:'🇨🇩', name:'Airtel Money',   country:'RDC'           },
+    { code:'ORANGE_COD',        flag:'🇨🇩', name:'Orange Money',   country:'RDC'           },
+    { code:'VODACOM_MPESA_COD', flag:'🇨🇩', name:'Vodacom M-Pesa', country:'RDC'           },
+    { code:'MPESA_KEN',         flag:'🇰🇪', name:'M-Pesa',         country:'Kenya'         },
+    { code:'AIRTEL_RWA',        flag:'🇷🇼', name:'Airtel Money',   country:'Rwanda'        },
+    { code:'MTN_MOMO_RWA',      flag:'🇷🇼', name:'MTN MoMo',       country:'Rwanda'        },
+    { code:'FREE_SEN',          flag:'🇸🇳', name:'Free Money',     country:'Sénégal'       },
+    { code:'ORANGE_SEN',        flag:'🇸🇳', name:'Orange Money',   country:'Sénégal'       },
+    { code:'ORANGE_SLE',        flag:'🇸🇱', name:'Orange Money',   country:'Sierra Leone'  },
+    { code:'AIRTEL_OAPI_UGA',   flag:'🇺🇬', name:'Airtel Money',   country:'Ouganda'       },
+    { code:'MTN_MOMO_UGA',      flag:'🇺🇬', name:'MTN MoMo',       country:'Ouganda'       },
+    { code:'AIRTEL_OAPI_ZMB',   flag:'🇿🇲', name:'Airtel Money',   country:'Zambie'        },
+    { code:'MTN_MOMO_ZMB',      flag:'🇿🇲', name:'MTN MoMo',       country:'Zambie'        },
+    { code:'ZAMTEL_ZMB',        flag:'🇿🇲', name:'Zamtel',         country:'Zambie'        },
+  ];
+
+  async function loadStatus() {
+    const btn = document.getElementById('refresh-btn');
+    btn.innerHTML = '<span class="spinner"></span> Actualisation...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(API + '/public/stats');
+      const data = await res.json();
+
+      if (!data.success) throw new Error(data.error);
+
+      // KPIs
+      document.getElementById('stat-success').textContent =
+        data.successRate !== null ? data.successRate + '%' : '—';
+      document.getElementById('stat-tx').textContent =
+        data.totalTransactions?.toLocaleString('fr-FR') || '0';
+      document.getElementById('stat-merchants').textContent =
+        data.activeMerchants || '0';
+
+      // Statut global
+      const rate = data.successRate || 0;
+      const badge = document.getElementById('global-badge');
+      const dot   = document.getElementById('global-dot');
+      const status = document.getElementById('global-status');
+      if (rate >= 90 || data.totalTransactions === 0) {
+        badge.className = 'status-badge ok'; dot.className = 'status-dot dot-ok';
+        status.textContent = 'Tous les systèmes opérationnels';
+      } else if (rate >= 70) {
+        badge.className = 'status-badge warn'; dot.className = 'status-dot dot-warn';
+        status.textContent = 'Performance dégradée';
+      } else {
+        badge.className = 'status-badge down'; dot.className = 'status-dot dot-down';
+        status.textContent = 'Incident en cours';
+      }
+
+      // Opérateurs
+      const failMap = {};
+      (data.failuresByCorrespondent || []).forEach(f => { failMap[f.correspondent] = f; });
+
+      const rows = OPERATORS.map(op => {
+        const f = failMap[op.code];
+        let pill, rate = null;
+        if (!f) {
+          pill = '<span class="pill pill-na">Aucune donnée</span>';
+        } else {
+          rate = f.total > 0 ? Math.round((f.completed / f.total) * 100) : 100;
+          if (rate >= 90)      pill = `<span class="pill pill-ok">✅ ${rate}%</span>`;
+          else if (rate >= 70) pill = `<span class="pill pill-warn">⚠️ ${rate}%</span>`;
+          else                 pill = `<span class="pill pill-down">❌ ${rate}%</span>`;
+        }
+        return `<div class="card-row">
+          <div class="row-left">
+            <div class="row-flag">${op.flag}</div>
+            <div>
+              <div class="row-name">${op.name}</div>
+              <div class="row-code">${op.country} · ${op.code}</div>
+            </div>
+          </div>
+          <div class="row-right">${pill}</div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('operators-card').innerHTML = rows;
+
+      // Dernière mise à jour
+      document.getElementById('last-update').textContent =
+        'Mis à jour à ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+    } catch (err) {
+      document.getElementById('global-badge').className = 'status-badge down';
+      document.getElementById('global-dot').className = 'status-dot dot-down';
+      document.getElementById('global-status').textContent = 'API inaccessible';
+      document.getElementById('operators-card').innerHTML =
+        '<div class="card-row" style="color:var(--danger);justify-content:center">Erreur : ' + err.message + '</div>';
+    }
+
+    btn.innerHTML = '🔄 Actualiser';
+    btn.disabled = false;
+  }
+
+  // Chargement initial + auto-refresh toutes les 60s
+  loadStatus();
+  setInterval(loadStatus, 60000);
+</script>
+
+</body>
+</html>
