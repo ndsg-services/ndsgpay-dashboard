@@ -473,7 +473,7 @@
 
   async function loadAdminSuccessRate() {
     try {
-      const res = await fetch(API + '/admin/public-stats', { headers: { 'x-admin-key': adminKey } });
+      const res = await fetch(API + '/public/stats', { headers: { 'x-admin-key': adminKey } });
       const data = await res.json();
       if (!data.success) return;
 
