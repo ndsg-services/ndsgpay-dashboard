@@ -375,6 +375,7 @@
       const s = document.getElementById('tx-search');
       if (s) s.value = '';
       loadTransactions('all', 'all');
+      loadAdminSuccessRate();
     }
     if (tab === 'withdrawals')  loadWithdrawals('all');
     if (tab === 'balances')     loadBalances();
@@ -466,6 +467,61 @@
       }
     } catch (err) {
       alert('Erreur de connexion');
+    }
+  }
+
+  async function loadAdminSuccessRate() {
+    try {
+      const res = await fetch(API + '/admin/stats', { headers: { 'x-admin-key': adminKey } });
+      const data = await res.json();
+      if (!data.success) return;
+
+      // KPI taux de succès global
+      const el = document.getElementById('admin-success-rate');
+      const note = document.getElementById('admin-success-note');
+      if (el && data.successRate !== null && data.successRate !== undefined) {
+        el.textContent = data.successRate + '%';
+        el.style.color = data.successRate >= 90 ? 'var(--success)' : data.successRate >= 70 ? 'var(--warning)' : 'var(--danger)';
+        if (note) note.textContent = data.totalTransactions + ' transactions au total';
+      }
+
+      // Tableau taux d'échec par opérateur
+      if (data.failuresByCorrespondent && data.failuresByCorrespondent.length > 0) {
+        let failBlock = document.getElementById('admin-failure-block');
+        if (!failBlock) {
+          failBlock = document.createElement('div');
+          failBlock.id = 'admin-failure-block';
+          failBlock.className = 'table-card';
+          failBlock.style.marginBottom = '16px';
+          const txPanel = document.getElementById('panel-transactions');
+          if (txPanel) txPanel.insertBefore(failBlock, txPanel.firstChild);
+        }
+        const rows = data.failuresByCorrespondent.map(f => {
+          const rate = f.total > 0 ? ((f.failed / f.total) * 100).toFixed(1) : '0.0';
+          const color = parseFloat(rate) > 20 ? 'var(--danger)' : parseFloat(rate) > 10 ? 'var(--warning)' : 'var(--success)';
+          return `<tr>
+            <td>${f.flag || '🌍'} ${f.country}</td>
+            <td class="td-mono" style="font-size:11px">${f.correspondent}</td>
+            <td>${f.total}</td>
+            <td style="color:var(--success)">${f.completed}</td>
+            <td style="color:var(--danger)">${f.failed}</td>
+            <td style="font-weight:600;color:${color}">${rate}%</td>
+          </tr>`;
+        }).join('');
+        failBlock.innerHTML = `
+          <div class="table-header">
+            <div class="table-title">Taux d'échec par opérateur</div>
+            <div style="font-size:11px;color:var(--muted)">Toutes transactions</div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Pays</th><th>Opérateur</th><th>Total</th><th>Réussies</th><th>Échouées</th><th>Taux d'échec</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      }
+    } catch (err) {
+      console.error('Admin success rate error:', err);
     }
   }
 
@@ -843,6 +899,7 @@
       alert('Clés générées pour ' + data.merchant.name + '\n\nClé publique : ' + data.merchant.publicKey + '\n\nLa clé secrète a été générée — le marchand peut la voir dans son dashboard.');
       closeModal();
       loadMerchants();
+    loadAdminSuccessRate();
     } catch (err) {
       alert('Erreur : ' + err.message);
     }
