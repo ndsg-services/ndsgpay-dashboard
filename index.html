@@ -636,6 +636,12 @@
     /* ── ANIMATIONS ──────────────────────────────────────────── */
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .panel.active { animation: fadeIn 0.3s ease both; }
+  
+    /* ── Lang Toggle Dashboard ── */
+    .dash-lang-toggle { display:flex; align-items:center; gap:0; background:var(--cream); border:1.5px solid var(--border); border-radius:20px; padding:3px; font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.06em; cursor:pointer; }
+    .dash-lang-opt { padding:3px 9px; border-radius:16px; color:var(--text-muted); transition:background .2s,color .2s; user-select:none; }
+    .dash-lang-opt.active { background:var(--blue); color:#fff; }
+
   </style>
 </head>
 <body>
@@ -715,7 +721,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-section-label">Principal</div>
+      <div class="nav-section-label" data-i18n="nav-sec-main">Principal</div>
       <button class="nav-item active" onclick="showPanel('overview')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Vue d'ensemble
@@ -735,7 +741,7 @@
         Analytics
       </button>
 
-      <div class="nav-section-label">Développeurs</div>
+      <div class="nav-section-label" data-i18n="nav-sec-dev">Développeurs</div>
       <button class="nav-item" onclick="showPanel('apikeys')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
         Clés API
@@ -745,7 +751,7 @@
         Documentation
       </button>
 
-      <div class="nav-section-label">Compte</div>
+      <div class="nav-section-label" data-i18n="nav-sec-account">Compte</div>
       <button class="nav-item" onclick="showPanel('settings')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Paramètres
@@ -775,6 +781,10 @@
       <div class="topbar-title" id="topbar-title">Vue d'<em>ensemble</em></div>
       <div class="topbar-right">
         <span class="env-badge" id="env-badge">Sandbox</span>
+        <div class="dash-lang-toggle" id="dash-lang-toggle">
+          <div class="dash-lang-opt active" id="dash-lang-fr" onclick="dashSetLang('fr')">FR</div>
+          <div class="dash-lang-opt" id="dash-lang-en" onclick="dashSetLang('en')">EN</div>
+        </div>
         <button class="btn-icon" title="Notifications">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         </button>
@@ -806,22 +816,22 @@
 
         <div class="kpi-grid">
           <div class="kpi">
-            <div class="kpi-label">Volume total</div>
+            <div class="kpi-label" data-i18n="kpi-vol">Volume total</div>
             <div class="kpi-value" id="kpi-volume">0 XAF</div>
             <div class="kpi-delta neutral">— Depuis le début</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Transactions</div>
+            <div class="kpi-label" data-i18n="kpi-tx">Transactions</div>
             <div class="kpi-value" id="kpi-tx">0</div>
             <div class="kpi-delta neutral">— En attente</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Taux de succès</div>
+            <div class="kpi-label" data-i18n="kpi-rate">Taux de succès</div>
             <div class="kpi-value" id="kpi-rate">—</div>
             <div class="kpi-note">Données insuffisantes</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Solde disponible</div>
+            <div class="kpi-label" data-i18n="kpi-balance">Solde disponible</div>
             <div class="kpi-value" id="kpi-fees">0 XAF</div>
             <div class="kpi-delta neutral">— Collecté - Frais - Payouts</div>
           </div>
@@ -829,7 +839,7 @@
 
         <div class="chart-card">
           <div class="chart-header">
-            <div class="chart-title">Volume par jour — 7 derniers jours</div>
+            <div class="chart-title" data-i18n="chart-vol">Volume par jour — 7 derniers jours</div>
             <div class="chart-legend">
               <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Collecte</div>
               <div class="legend-item"><div class="legend-dot" style="background:var(--blue-mid)"></div> Payout</div>
@@ -856,7 +866,7 @@
 
         <div class="table-card">
           <div class="table-header">
-            <div class="table-title">Dernières transactions</div>
+            <div class="table-title" data-i18n="table-recent">Dernières transactions</div>
             <button class="btn-sm" onclick="showPanel('transactions')">Voir tout</button>
           </div>
           <div id="recent-tx-body">
@@ -864,7 +874,7 @@
               <div class="empty-icon">
                 <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </div>
-              <div class="empty-title">Aucune transaction</div>
+              <div class="empty-title" data-i18n="empty-tx">Aucune transaction</div>
               <div class="empty-desc">Vos transactions apparaîtront ici dès que vous aurez intégré l'API NDSGPay.</div>
               <button class="btn-sm primary" onclick="showPanel('docs')">Voir la documentation</button>
             </div>
@@ -885,7 +895,7 @@
 
         <div class="table-card">
           <div class="table-header">
-            <div class="table-title">Toutes les transactions</div>
+            <div class="table-title" data-i18n="table-all-tx">Toutes les transactions</div>
             <div class="table-actions">
               <button class="btn-sm">Exporter CSV</button>
               <button class="btn-sm primary" onclick="showPanel('docs')">+ Nouvelle</button>
@@ -911,13 +921,13 @@
 
         <div class="table-card" id="withdrawals-table">
           <div class="table-header">
-            <div class="table-title">Historique des virements</div>
+            <div class="table-title" data-i18n="table-withdrawals">Historique des virements</div>
           </div>
           <div class="empty-state" id="withdrawals-empty">
             <div class="empty-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
-            <div class="empty-title">Aucune demande de virement</div>
+            <div class="empty-title" data-i18n="empty-withdraw">Aucune demande de virement</div>
             <div class="empty-desc">Cliquez sur "Demander un virement" pour transférer votre solde vers votre compte bancaire.</div>
           </div>
         </div>
@@ -927,30 +937,30 @@
       <div class="panel" id="panel-analytics">
         <div class="kpi-grid" style="margin-bottom:20px">
           <div class="kpi">
-            <div class="kpi-label">Collecte (total)</div>
+            <div class="kpi-label" data-i18n="kpi-collect">Collecte (total)</div>
             <div class="kpi-value" id="kpi-deposit-vol">0 XAF</div>
             <div class="kpi-note">Frais : 3% / tx</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Payout (total)</div>
+            <div class="kpi-label" data-i18n="kpi-payout">Payout (total)</div>
             <div class="kpi-value" id="kpi-payout-vol">0 XAF</div>
             <div class="kpi-note">Frais : 2% / tx</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Taux de succès</div>
+            <div class="kpi-label" data-i18n="kpi-rate">Taux de succès</div>
             <div class="kpi-value" id="kpi-rate-2">—</div>
             <div class="kpi-note">Insuffisant</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Frais générés</div>
+            <div class="kpi-label" data-i18n="kpi-fees">Frais générés</div>
             <div class="kpi-value" id="kpi-fees-2">0 XAF</div>
-            <div class="kpi-note">Depuis le début</div>
+            <div class="kpi-note" data-i18n="kpi-since">Depuis le début</div>
           </div>
         </div>
 
         <div class="chart-card">
           <div class="chart-header">
-            <div class="chart-title">Répartition par opérateur</div>
+            <div class="chart-title" data-i18n="chart-op">Répartition par opérateur</div>
           </div>
           <div class="empty-state" style="padding:32px">
             <div class="empty-title">Données insuffisantes</div>
@@ -1363,6 +1373,94 @@
     }
   }
 
+
+  // ── Dashboard i18n ────────────────────────────────────────
+  const DASH_I18N = {
+  "fr": {
+    "nav-sec-main": "Principal",
+    "nav-sec-dev": "Développeurs",
+    "nav-sec-account": "Compte",
+    "nav-overview": "Vue d'ensemble",
+    "nav-transactions": "Transactions",
+    "nav-withdrawals": "Virements",
+    "nav-analytics": "Analytics",
+    "nav-apikeys": "Clés API",
+    "nav-docs": "Documentation",
+    "nav-settings": "Paramètres",
+    "nav-status": "Statut API",
+    "kpi-vol": "Volume total",
+    "kpi-tx": "Transactions",
+    "kpi-rate": "Taux de succès",
+    "kpi-balance": "Solde disponible",
+    "kpi-since": "Depuis le début",
+    "kpi-collect": "Collecte (total)",
+    "kpi-payout": "Payout (total)",
+    "kpi-fees": "Frais générés",
+    "chart-vol": "Volume par jour — 7 derniers jours",
+    "chart-country": "Répartition par pays & opérateur",
+    "chart-op": "Répartition par opérateur",
+    "chart-balance": "Soldes par devise",
+    "table-recent": "Dernières transactions",
+    "table-all-tx": "Toutes les transactions",
+    "table-withdrawals": "Historique des virements",
+    "empty-tx": "Aucune transaction",
+    "empty-withdraw": "Aucune demande de virement",
+    "no-data": "Données insuffisantes"
+  },
+  "en": {
+    "nav-sec-main": "Main",
+    "nav-sec-dev": "Developers",
+    "nav-sec-account": "Account",
+    "nav-overview": "Overview",
+    "nav-transactions": "Transactions",
+    "nav-withdrawals": "Payouts",
+    "nav-analytics": "Analytics",
+    "nav-apikeys": "API Keys",
+    "nav-docs": "Documentation",
+    "nav-settings": "Settings",
+    "nav-status": "API Status",
+    "kpi-vol": "Total volume",
+    "kpi-tx": "Transactions",
+    "kpi-rate": "Success rate",
+    "kpi-balance": "Available balance",
+    "kpi-since": "All time",
+    "kpi-collect": "Collection (total)",
+    "kpi-payout": "Payout (total)",
+    "kpi-fees": "Fees generated",
+    "chart-vol": "Daily volume — last 7 days",
+    "chart-country": "Breakdown by country & operator",
+    "chart-op": "Breakdown by operator",
+    "chart-balance": "Balances by currency",
+    "table-recent": "Recent transactions",
+    "table-all-tx": "All transactions",
+    "table-withdrawals": "Payout history",
+    "empty-tx": "No transactions",
+    "empty-withdraw": "No payout requests",
+    "no-data": "Insufficient data"
+  }
+};
+  let dashLang = localStorage.getItem('ndsgpayDashLang') || 'fr';
+
+  function dashApplyLang(lang) {
+    dashLang = lang;
+    localStorage.setItem('ndsgpayDashLang', lang);
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (DASH_I18N[lang] && DASH_I18N[lang][key]) {
+        el.textContent = DASH_I18N[lang][key];
+      }
+    });
+    document.getElementById('dash-lang-fr').classList.toggle('active', lang === 'fr');
+    document.getElementById('dash-lang-en').classList.toggle('active', lang === 'en');
+  }
+
+  function dashSetLang(lang) { dashApplyLang(lang); }
+
+  // Appliquer au chargement
+  window.addEventListener('DOMContentLoaded', () => {
+    dashApplyLang(dashLang);
+  });
+
   // ── SETTINGS ─────────────────────────────────────────────────
   async function loadSettings(merchant) {
     const co = document.getElementById('set-company');
@@ -1636,7 +1734,7 @@
     currencyBlock.innerHTML = `
       <div class="chart-card">
         <div class="chart-header">
-          <div class="chart-title">Soldes par devise</div>
+          <div class="chart-title" data-i18n="chart-balance">Soldes par devise</div>
         </div>
         <table>
           <thead><tr>
@@ -1861,7 +1959,7 @@
       if (!container.querySelector('.empty-state')) {
         container.innerHTML += `<div class="empty-state">
           <div class="empty-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div class="empty-title">Aucune transaction</div>
+          <div class="empty-title" data-i18n="empty-tx">Aucune transaction</div>
           <div class="empty-desc">Intégrez l'API NDSGPay pour commencer à collecter des paiements.</div>
         </div>`;
       }
@@ -1882,7 +1980,7 @@
 
     container.innerHTML = `
       <div class="table-header">
-        <div class="table-title">Toutes les transactions</div>
+        <div class="table-title" data-i18n="table-all-tx">Toutes les transactions</div>
         <div class="table-actions"><button class="btn-sm">Exporter CSV</button></div>
       </div>
       <table>
@@ -1964,10 +2062,10 @@
     const container = document.getElementById('withdrawals-table');
     if (withdrawals.length === 0) {
       container.innerHTML = `
-        <div class="table-header"><div class="table-title">Historique des virements</div></div>
+        <div class="table-header"><div class="table-title" data-i18n="table-withdrawals">Historique des virements</div></div>
         <div class="empty-state">
           <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div class="empty-title">Aucune demande de virement</div>
+          <div class="empty-title" data-i18n="empty-withdraw">Aucune demande de virement</div>
           <div class="empty-desc">Cliquez sur "Demander un virement" pour transférer votre solde vers votre compte bancaire.</div>
         </div>`;
       return;
@@ -1991,7 +2089,7 @@
 
     container.innerHTML = `
       <div class="table-header">
-        <div class="table-title">Historique des virements</div>
+        <div class="table-title" data-i18n="table-withdrawals">Historique des virements</div>
       </div>
       <table>
         <thead><tr>
@@ -2118,5 +2216,6 @@
 </body>
 </html>
 </html>
+
 
 
