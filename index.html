@@ -1417,7 +1417,7 @@
     "col-amount": "Montant",
     "col-status": "Statut",
     "col-date": "Date",
-    "title-overview": "Vue d'<em>ensemble</em>",
+    "title-overview": "Vue d'ensemble",
     "title-transactions": "Transactions",
     "title-withdrawals": "Virements",
     "title-analytics": "Analytics",
@@ -1475,11 +1475,6 @@
     "title-settings": "Settings"
   }
 };
-status": "Status",
-    "col-date": "Date",
-    "title-overview": "Overview"
-  }
-};
   let dashLang = localStorage.getItem('ndsgpayDashLang') || 'fr';
 
   function dashApplyLang(lang) {
@@ -1488,22 +1483,9 @@ status": "Status",
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
       if (DASH_I18N[lang] && DASH_I18N[lang][key]) {
-        // Utiliser innerHTML pour les éléments avec balises (em, strong)
-        if (DASH_I18N[lang][key].includes('<')) {
-          el.innerHTML = DASH_I18N[lang][key];
-        } else {
-          el.textContent = DASH_I18N[lang][key];
-        }
+        el.textContent = DASH_I18N[lang][key];
       }
     });
-    // Mettre à jour le titre de la page courante
-    const panels = { overview: 'title-overview', transactions: 'title-transactions', withdrawals: 'title-withdrawals', analytics: 'title-analytics', apikeys: 'title-apikeys', docs: 'title-docs', settings: 'title-settings' };
-    if (currentPanel && panels[currentPanel]) {
-      const titleEl = document.querySelector('.page-title');
-      if (titleEl && DASH_I18N[lang] && DASH_I18N[lang][panels[currentPanel]]) {
-        titleEl.innerHTML = DASH_I18N[lang][panels[currentPanel]];
-      }
-    }
     document.getElementById('dash-lang-fr').classList.toggle('active', lang === 'fr');
     document.getElementById('dash-lang-en').classList.toggle('active', lang === 'en');
   }
