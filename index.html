@@ -1690,6 +1690,53 @@
   }
 
   // ── CHART ────────────────────────────────────────────────────
+  function renderFailureStats(stats) {
+    const analyticsPanel = document.getElementById('panel-analytics');
+    if (!analyticsPanel || !stats) return;
+
+    let failBlock = document.getElementById('failure-stats-block');
+    if (!failBlock) {
+      failBlock = document.createElement('div');
+      failBlock.id = 'failure-stats-block';
+      failBlock.style.cssText = 'margin-bottom:24px';
+      const corrBlock = document.getElementById('by-correspondent-block');
+      const currBlock = document.getElementById('multi-currency-block');
+      const anchor = corrBlock || currBlock;
+      if (anchor) anchor.after(failBlock);
+      else analyticsPanel.appendChild(failBlock);
+    }
+
+    const failures = stats.failuresByCorrespondent || [];
+    if (failures.length === 0) { failBlock.innerHTML = ''; return; }
+
+    const rows = failures.map(f => {
+      const rate = f.total > 0 ? ((f.failed / f.total) * 100).toFixed(1) : '0.0';
+      const color = parseFloat(rate) > 20 ? 'var(--danger)' : parseFloat(rate) > 10 ? 'var(--warning)' : 'var(--success)';
+      return `<tr>
+        <td>${f.flag || '🌍'} ${f.country}</td>
+        <td class="td-mono" style="font-size:11px">${f.correspondent}</td>
+        <td>${f.total}</td>
+        <td style="color:var(--success)">${f.completed}</td>
+        <td style="color:var(--danger)">${f.failed}</td>
+        <td style="font-weight:600;color:${color}">${rate}%</td>
+      </tr>`;
+    }).join('');
+
+    failBlock.innerHTML = `
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Taux d'échec par opérateur</div>
+          <div style="font-size:11px;color:var(--text-muted)">Depuis le début</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Pays</th><th>Opérateur</th><th>Total</th><th>Réussies</th><th>Échouées</th><th>Taux d'échec</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
   function initChartLabels() {
     const days = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
     const today = new Date().getDay();
