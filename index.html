@@ -724,41 +724,41 @@
       <div class="nav-section-label" data-i18n="nav-sec-main">Principal</div>
       <button class="nav-item active" onclick="showPanel('overview')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        Vue d'ensemble
+        <span data-i18n="nav-overview">Vue d\'ensemble</span>
       </button>
       <button class="nav-item" onclick="showPanel('transactions')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        Transactions
+        <span data-i18n="nav-transactions">Transactions</span>
         <span class="nav-badge">0</span>
       </button>
       <button class="nav-item" onclick="showPanel('withdrawals')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><polyline points="8 18 4 22 8 26"/></svg>
-        Virements
+        <span data-i18n="nav-withdrawals">Virements</span>
         <span class="nav-badge" id="withdrawal-badge" style="display:none;background:var(--warning)">!</span>
       </button>
       <button class="nav-item" onclick="showPanel('analytics')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-        Analytics
+        <span data-i18n="nav-analytics">Analytics</span>
       </button>
 
       <div class="nav-section-label" data-i18n="nav-sec-dev">Développeurs</div>
       <button class="nav-item" onclick="showPanel('apikeys')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-        Clés API
+        <span data-i18n="nav-apikeys">Clés API</span>
       </button>
       <button class="nav-item" onclick="showPanel('docs')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Documentation
+        <span data-i18n="nav-docs">Documentation</span>
       </button>
 
       <div class="nav-section-label" data-i18n="nav-sec-account">Compte</div>
       <button class="nav-item" onclick="showPanel('settings')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Paramètres
+        <span data-i18n="nav-settings">Paramètres</span>
       </button>
       <a class="nav-item" href="status.html" target="_blank" style="opacity:0.65;text-decoration:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Statut API
+        <span data-i18n="nav-status">Statut API</span>
       </a>
     </nav>
 
@@ -828,7 +828,7 @@
           <div class="kpi">
             <div class="kpi-label" data-i18n="kpi-rate">Taux de succès</div>
             <div class="kpi-value" id="kpi-rate">—</div>
-            <div class="kpi-note">Données insuffisantes</div>
+            <div class="kpi-note" data-i18n="kpi-no-data">Données insuffisantes</div>
           </div>
           <div class="kpi">
             <div class="kpi-label" data-i18n="kpi-balance">Solde disponible</div>
@@ -1405,7 +1405,8 @@
     "table-withdrawals": "Historique des virements",
     "empty-tx": "Aucune transaction",
     "empty-withdraw": "Aucune demande de virement",
-    "no-data": "Données insuffisantes"
+    "no-data": "Données insuffisantes",
+        "kpi-no-data": "Données insuffisantes"
   },
   "en": {
     "nav-sec-main": "Main",
@@ -1436,7 +1437,8 @@
     "table-withdrawals": "Payout history",
     "empty-tx": "No transactions",
     "empty-withdraw": "No payout requests",
-    "no-data": "Insufficient data"
+    "no-data": "Insufficient data",
+        "kpi-no-data": "Insufficient data"
   }
 };
   let dashLang = localStorage.getItem('ndsgpayDashLang') || 'fr';
@@ -1771,7 +1773,7 @@
     corrBlock.innerHTML = `
       <div class="chart-card">
         <div class="chart-header">
-          <div class="chart-title">Répartition par pays & opérateur</div>
+          <div class="chart-title" data-i18n="chart-country">Répartition par pays &amp; opérateur</div>
         </div>
         <table>
           <thead><tr>
