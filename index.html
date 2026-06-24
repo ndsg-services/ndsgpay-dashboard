@@ -855,13 +855,15 @@
             <div class="table-title">Dernières transactions</div>
             <button class="btn-sm" onclick="showPanel('transactions')">Voir tout</button>
           </div>
-          <div class="empty-state">
-            <div class="empty-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div id="recent-tx-body">
+            <div class="empty-state">
+              <div class="empty-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div class="empty-title">Aucune transaction</div>
+              <div class="empty-desc">Vos transactions apparaîtront ici dès que vous aurez intégré l'API NDSGPay.</div>
+              <button class="btn-sm primary" onclick="showPanel('docs')">Voir la documentation</button>
             </div>
-            <div class="empty-title">Aucune transaction</div>
-            <div class="empty-desc">Vos transactions apparaîtront ici dès que vous aurez intégré l'API NDSGPay.</div>
-            <button class="btn-sm primary" onclick="showPanel('docs')">Voir la documentation</button>
           </div>
         </div>
       </div>
@@ -1561,6 +1563,9 @@
       // Taux d'échec par opérateur
       renderFailureStats(s);
 
+      // Dernières transactions
+      loadRecentTransactions();
+
       // Badge transactions
       const badge = document.querySelector('.nav-badge');
       if (badge) badge.textContent = s.totalTransactions;
@@ -1769,6 +1774,52 @@
     const hasData = chartData.some(d => d.volume > 0);
     const noDataMsg = document.querySelector('#main-chart + div + div');
     if (noDataMsg && hasData) noDataMsg.style.display = 'none';
+  }
+
+  // ── RECENT TRANSACTIONS (overview) ─────────────────────────
+  async function loadRecentTransactions() {
+    if (!jwtToken) return;
+    const el = document.getElementById('recent-tx-body');
+    if (!el) return;
+    try {
+      const [depRes, payRes] = await Promise.all([
+        fetch(`${API}/deposits?limit=10`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }),
+        fetch(`${API}/payouts?limit=10`,  { headers: { 'Authorization': `Bearer ${jwtToken}` } })
+      ]);
+      const depData = await depRes.json();
+      const payData = await payRes.json();
+      const deps = (depData.data || []).map(d => ({ ...d, type: 'deposit' }));
+      const pays = (payData.data || []).map(p => ({ ...p, type: 'payout' }));
+      const all  = [...deps, ...pays]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 10);
+
+      if (all.length === 0) return; // Garder l'état vide par défaut
+
+      const statusBadge = s => {
+        if (s === 'COMPLETED') return '<span style="color:var(--success);font-size:11px;font-weight:500">✅ Réussie</span>';
+        if (s === 'FAILED')    return '<span style="color:var(--danger);font-size:11px;font-weight:500">❌ Échouée</span>';
+        return '<span style="color:var(--warning);font-size:11px;font-weight:500">⏳ En cours</span>';
+      };
+
+      el.innerHTML = `<table>
+        <thead><tr>
+          <th>Type</th><th>Opérateur</th><th>Numéro</th><th>Montant</th><th>Statut</th><th>Date</th>
+        </tr></thead>
+        <tbody>
+          ${all.map(tx => `<tr>
+            <td>${tx.type === 'deposit' ? '📥' : '📤'} ${tx.type === 'deposit' ? 'Collecte' : 'Payout'}</td>
+            <td style="font-size:11px;color:var(--text-muted)">${tx.correspondent || '—'}</td>
+            <td style="font-size:11px">${tx.msisdn || '—'}</td>
+            <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(tx.amount)} ${tx.currency || 'XAF'}</td>
+            <td>${statusBadge(tx.status)}</td>
+            <td style="font-size:11px;color:var(--text-muted)">${new Date(tx.createdAt).toLocaleDateString('fr-FR')} ${new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    } catch (err) {
+      console.error('Recent tx error:', err);
+    }
   }
 
   // ── TRANSACTIONS ─────────────────────────────────────────────
