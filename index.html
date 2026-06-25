@@ -756,6 +756,10 @@
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span data-i18n="nav-team">Équipe</span>
         </div>
+        <div class="nav-item" onclick="showPanel('poskeys')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span data-i18n="nav-poskeys">Caisses POS</span>
+        </div>
       <button class="nav-item" onclick="showPanel('settings')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <span data-i18n="nav-settings">Paramètres</span>
@@ -1187,7 +1191,58 @@
         </div>
       </div>
 
-      <!-- ── SETTINGS ── -->
+      <!-- ── POS KEYS ── -->
+      <div class="panel" id="panel-poskeys">
+        <div class="api-key-card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:var(--text)" data-i18n="poskeys-title">Caisses POS</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px" data-i18n="poskeys-desc">Clés API restreintes pour vos caissiers</div>
+            </div>
+            <button class="btn-sm primary" onclick="showPosKeyForm()" id="btn-new-poskey" data-i18n="poskeys-new">+ Nouvelle caisse</button>
+          </div>
+
+          <!-- Formulaire création -->
+          <div id="poskey-form" style="display:none;background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:12px;color:var(--text)" data-i18n="poskeys-create">Créer une clé POS</div>
+            <input type="text" id="poskey-label" class="form-input" placeholder="Ex: Caissier 1, Tablette accueil..." autocomplete="off" style="font-size:12px;padding:8px 12px;margin-bottom:10px;width:100%;box-sizing:border-box"/>
+            <div style="display:flex;gap:16px;margin-bottom:12px">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+                <input type="checkbox" id="poskey-deposit" checked /> Collecte (encaisser)
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+                <input type="checkbox" id="poskey-payout" /> Payout (rendre monnaie)
+              </label>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sm primary" onclick="createPosKey()">Créer</button>
+              <button class="btn-sm" onclick="hidePosKeyForm()">Annuler</button>
+            </div>
+            <div id="poskey-msg" style="margin-top:10px;font-size:12px"></div>
+          </div>
+
+          <!-- Liste clés -->
+          <div id="poskeys-list"><div style="color:var(--text-muted);font-size:13px">Chargement...</div></div>
+        </div>
+
+        <!-- QR Code modal -->
+        <div id="poskey-qr-modal" style="display:none;position:fixed;inset:0;background:rgba(26,26,24,.5);z-index:2000;align-items:center;justify-content:center">
+          <div style="background:#fff;border-radius:16px;padding:28px;max-width:380px;width:90%;text-align:center">
+            <div style="font-size:16px;font-weight:600;margin-bottom:8px" id="qr-label">—</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px" data-i18n="poskeys-qr-desc">Scannez ce QR code avec l'app POS NDSGPay</div>
+            <div id="qr-container" style="margin:0 auto 20px;width:200px;height:200px;background:var(--cream);border-radius:8px;display:flex;align-items:center;justify-content:center">
+              <div style="font-size:11px;color:var(--text-muted)">Génération...</div>
+            </div>
+            <div id="qr-url" style="font-size:10px;color:var(--text-muted);word-break:break-all;margin-bottom:16px"></div>
+            <div style="display:flex;gap:8px;justify-content:center">
+              <button class="btn-sm primary" onclick="copyQRUrl()">Copier le lien</button>
+              <button class="btn-sm" onclick="closeQRModal()">Fermer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- __ SETTINGS __ -->
       <div class="panel" id="panel-settings">
         <div class="api-key-card" style="margin-bottom:16px">
           <div style="font-size:13px;font-weight:500;margin-bottom:16px;color:var(--text)">Informations du compte</div>
@@ -1266,6 +1321,7 @@
       apikeys:      "Clés <em>API</em>",
       docs:         "Documentation",
       team:         "Équipe",
+      poskeys:      "Caisses <em>POS</em>",
       settings:     "Paramètres",
     },
     en: {
@@ -1276,6 +1332,7 @@
       apikeys:      "<em>API</em> Keys",
       docs:         "Documentation",
       team:         "Team",
+      poskeys:      "<em>POS</em> Terminals",
       settings:     "Settings",
     }
   };
@@ -1287,6 +1344,7 @@
     apikeys:      { id: 'panel-apikeys'      },
     docs:         { id: 'panel-docs'         },
     team:         { id: 'panel-team'         },
+    poskeys:      { id: 'panel-poskeys'      },
     settings:     { id: 'panel-settings'     },
   };
   let activePanel = 'overview';
@@ -1307,6 +1365,7 @@
     if (name === 'transactions') loadTransactions();
     if (name === 'withdrawals') loadWithdrawals();
     if (name === 'team') loadTeam();
+    if (name === 'poskeys') loadPosKeys();
   }
 
   // ── LOGIN ────────────────────────────────────────────────────
@@ -1461,6 +1520,12 @@
     "nav-settings": "Paramètres",
     "nav-status": "Statut API",
     "nav-team": "Équipe",
+    "nav-poskeys": "Caisses POS",
+    "poskeys-title": "Caisses POS",
+    "poskeys-desc": "Clés API restreintes pour vos caissiers",
+    "poskeys-new": "+ Nouvelle caisse",
+    "poskeys-create": "Créer une clé POS",
+    "poskeys-qr-desc": "Scannez ce QR code avec l'app POS NDSGPay",
     "team-members": "Membres de l'équipe",
     "team-invite": "+ Inviter",
     "team-invite-title": "Inviter un membre",
@@ -1517,6 +1582,12 @@
     "nav-settings": "Settings",
     "nav-status": "API Status",
     "nav-team": "Team",
+    "nav-poskeys": "POS Terminals",
+    "poskeys-title": "POS Terminals",
+    "poskeys-desc": "Restricted API keys for your cashiers",
+    "poskeys-new": "+ New terminal",
+    "poskeys-create": "Create POS key",
+    "poskeys-qr-desc": "Scan this QR code with the NDSGPay POS app",
     "team-members": "Team members",
     "team-invite": "+ Invite",
     "team-invite-title": "Invite a member",
@@ -2550,6 +2621,136 @@
       await fetch(`${API}/team/invites/${inviteId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } });
       loadTeam();
     } catch (err) { console.error(err); }
+  }
+
+  // ── POS KEYS ─────────────────────────────────────────────────
+  let currentQRUrl = '';
+
+  async function loadPosKeys() {
+    if (!jwtToken) return;
+    const list = document.getElementById('poskeys-list');
+    if (!list) return;
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>';
+    try {
+      const res  = await fetch(API + '/pos-keys', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      const data = await res.json();
+      if (!data.success) return;
+      const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
+      if (data.keys.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">' + (lang === 'en' ? 'No POS terminal yet.' : 'Aucune caisse POS. Cliquez sur + pour créer.') + '</div>';
+        return;
+      }
+      const rows = data.keys.map(k => {
+        const dep = k.scopeDeposit ? '<span style="background:#dcfce7;color:#15803d;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:600;margin-right:4px">' + (lang === 'en' ? 'Collect' : 'Collecte') + '</span>' : '';
+        const pay = k.scopePayout  ? '<span style="background:#dbeafe;color:#1d4ed8;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:600">Payout</span>' : '';
+        const statusBg = k.isActive ? '#dcfce7' : '#fee2e2';
+        const statusColor = k.isActive ? '#15803d' : '#dc2626';
+        const statusTxt = k.isActive ? (lang === 'en' ? 'Active' : 'Active') : (lang === 'en' ? 'Inactive' : 'Inactive');
+        const lastUsed = k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleDateString('fr-FR') : '—';
+        const lbl = k.label.replace(/'/g, "\\'");
+        return '<tr>' +
+          '<td style="padding:8px 0;font-size:13px;font-weight:500">' + k.label + '</td>' +
+          '<td style="padding:8px 0">' + dep + pay + '</td>' +
+          '<td style="padding:8px 0;font-size:11px;color:var(--text-muted)">' + lastUsed + '</td>' +
+          '<td style="padding:8px 0"><span style="background:' + statusBg + ';color:' + statusColor + ';padding:1px 8px;border-radius:20px;font-size:10px;font-weight:600">' + statusTxt + '</span></td>' +
+          '<td style="padding:8px 0;text-align:right">' +
+            '<button class="btn-sm" onclick="showQRCode('' + k.id + '','' + lbl + '')" style="font-size:11px;margin-right:4px">QR</button>' +
+            '<button class="btn-sm" onclick="togglePosKey('' + k.id + '',' + (!k.isActive) + ')" style="font-size:11px;margin-right:4px">' + (k.isActive ? (lang === 'en' ? 'Disable' : 'Désactiver') : (lang === 'en' ? 'Enable' : 'Activer')) + '</button>' +
+            '<button class="btn-sm" onclick="deletePosKey('' + k.id + '','' + lbl + '')" style="font-size:11px;color:var(--danger)">✕</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+      list.innerHTML = '<table style="width:100%"><thead><tr>' +
+        '<th style="text-align:left;font-size:11px;color:var(--text-muted);padding-bottom:8px">' + (lang === 'en' ? 'Label' : 'Nom') + '</th>' +
+        '<th style="text-align:left;font-size:11px;color:var(--text-muted);padding-bottom:8px">Permissions</th>' +
+        '<th style="text-align:left;font-size:11px;color:var(--text-muted);padding-bottom:8px">' + (lang === 'en' ? 'Last used' : 'Dernière utilisation') + '</th>' +
+        '<th style="text-align:left;font-size:11px;color:var(--text-muted);padding-bottom:8px">Statut</th>' +
+        '<th></th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table>';
+    } catch (err) { list.innerHTML = '<div style="color:var(--danger);font-size:13px">Erreur.</div>'; }
+  }
+
+  function showPosKeyForm() {
+    document.getElementById('poskey-form').style.display = 'block';
+    document.getElementById('btn-new-poskey').style.display = 'none';
+  }
+  function hidePosKeyForm() {
+    document.getElementById('poskey-form').style.display = 'none';
+    document.getElementById('btn-new-poskey').style.display = 'inline-flex';
+    document.getElementById('poskey-label').value = '';
+    document.getElementById('poskey-msg').textContent = '';
+  }
+
+  async function createPosKey() {
+    const label        = document.getElementById('poskey-label').value.trim();
+    const scopeDeposit = document.getElementById('poskey-deposit').checked;
+    const scopePayout  = document.getElementById('poskey-payout').checked;
+    const msg          = document.getElementById('poskey-msg');
+    if (!label) { msg.style.color = 'var(--danger)'; msg.textContent = 'Nom requis.'; return; }
+    try {
+      const res  = await fetch(API + '/pos-keys', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + jwtToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label, scopeDeposit, scopePayout })
+      });
+      const data = await res.json();
+      if (data.success) {
+        msg.style.color = 'var(--success)'; msg.textContent = 'Clé créée !';
+        setTimeout(() => { hidePosKeyForm(); loadPosKeys(); }, 1000);
+      } else { msg.style.color = 'var(--danger)'; msg.textContent = data.error || 'Erreur'; }
+    } catch (err) { msg.style.color = 'var(--danger)'; msg.textContent = 'Erreur reseau.'; }
+  }
+
+  async function togglePosKey(id, isActive) {
+    try {
+      await fetch(API + '/pos-keys/' + id, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + jwtToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive })
+      });
+      loadPosKeys();
+    } catch (err) { alert('Erreur reseau'); }
+  }
+
+  async function deletePosKey(id, label) {
+    const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
+    if (!confirm(lang === 'en' ? 'Delete key "' + label + '"?' : 'Supprimer la clé "' + label + '" ?')) return;
+    try {
+      await fetch(API + '/pos-keys/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      loadPosKeys();
+    } catch (err) { alert('Erreur reseau'); }
+  }
+
+  async function showQRCode(id, label) {
+    document.getElementById('qr-label').textContent = label;
+    document.getElementById('qr-container').innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Chargement...</div>';
+    document.getElementById('qr-url').textContent = '';
+    document.getElementById('poskey-qr-modal').style.display = 'flex';
+    try {
+      const res  = await fetch(API + '/pos-keys/' + id + '/qr', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      const data = await res.json();
+      if (data.success) {
+        currentQRUrl = data.activationUrl;
+        document.getElementById('qr-url').textContent = data.activationUrl;
+        const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.activationUrl);
+        document.getElementById('qr-container').innerHTML = '<img src="' + qrSrc + '" style="width:200px;height:200px;border-radius:8px" />';
+      }
+    } catch (err) {
+      document.getElementById('qr-container').innerHTML = '<div style="color:var(--danger);font-size:12px">Erreur</div>';
+    }
+  }
+
+  function closeQRModal() {
+    document.getElementById('poskey-qr-modal').style.display = 'none';
+    currentQRUrl = '';
+  }
+
+  function copyQRUrl() {
+    if (!currentQRUrl) return;
+    navigator.clipboard.writeText(currentQRUrl).then(() => {
+      const btns = document.querySelectorAll('#poskey-qr-modal .btn-sm');
+      btns.forEach(b => { if (b.textContent.includes('Copier') || b.textContent.includes('Copy')) { b.textContent = 'Copié ✓'; setTimeout(() => { b.textContent = 'Copier le lien'; }, 2000); } });
+    });
   }
 
 </script>
