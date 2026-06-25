@@ -2286,13 +2286,68 @@
     }
   }
 
-  function openWithdrawalModal() {
+  let wdSelectedCorrespondent = null;
+  let wdSelectedCurrency = null;
+  let wdSelectedBalance = 0;
+
+  async function openWithdrawalModal() {
+    wdSelectedCorrespondent = null;
+    wdSelectedCurrency = null;
+    wdSelectedBalance = 0;
+    document.getElementById('wd-step1').style.display = 'block';
+    document.getElementById('wd-step2').style.display = 'none';
     document.getElementById('withdrawal-modal').style.display = 'flex';
+    // Charger les soldes par correspondant
+    const list = document.getElementById('wd-balances-list');
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>';
+    try {
+      const res  = await fetch(`${API}/withdrawals/balances`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const data = await res.json();
+      if (!data.success || data.balances.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Aucun solde disponible pour le moment.</div>';
+        return;
+      }
+      list.innerHTML = data.balances.map(b => `
+        <div onclick="selectCorrespondent('${b.correspondent}','${b.currency}',${b.availableBalance})"
+          style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s"
+          onmouseover="this.style.borderColor='var(--blue)';this.style.background='var(--blue-light)'"
+          onmouseout="this.style.borderColor='var(--border)';this.style.background='transparent'">
+          <div>
+            <div style="font-size:13px;font-weight:600">${b.correspondent}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${b.currency}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:15px;font-weight:700;color:var(--success)">${new Intl.NumberFormat('fr-FR').format(b.availableBalance)} ${b.currency}</div>
+            <div style="font-size:11px;color:var(--text-muted)">disponible</div>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      list.innerHTML = '<div style="color:var(--danger);font-size:13px">Erreur de chargement.</div>';
+    }
+  }
+
+  function selectCorrespondent(corr, currency, balance) {
+    wdSelectedCorrespondent = corr;
+    wdSelectedCurrency = currency;
+    wdSelectedBalance = balance;
+    document.getElementById('wd-step1').style.display = 'none';
+    document.getElementById('wd-step2').style.display = 'block';
+    document.getElementById('wd-corr-summary').innerHTML =
+      `💡 Virement depuis <strong>${corr}</strong> — Solde disponible : <strong>${new Intl.NumberFormat('fr-FR').format(balance)} ${currency}</strong>`;
+    document.getElementById('wd-amount').value = '';
+    document.getElementById('wd-amount-hint').textContent = `Maximum : ${new Intl.NumberFormat('fr-FR').format(balance)} ${currency}`;
+    document.getElementById('withdrawal-form-result').style.display = 'none';
+  }
+
+  function backToStep1() {
+    document.getElementById('wd-step1').style.display = 'block';
+    document.getElementById('wd-step2').style.display = 'none';
   }
 
   function closeWithdrawalModal() {
     document.getElementById('withdrawal-modal').style.display = 'none';
-    document.getElementById('withdrawal-form-result').style.display = 'none';
+    const res = document.getElementById('withdrawal-form-result');
+    if (res) res.style.display = 'none';
   }
 
   async function submitWithdrawal() {
@@ -2306,6 +2361,10 @@
       alert('Veuillez remplir tous les champs obligatoires');
       return;
     }
+    if (parseFloat(amount) > wdSelectedBalance) {
+      alert(`Montant supérieur au solde disponible (${new Intl.NumberFormat('fr-FR').format(wdSelectedBalance)} ${wdSelectedCurrency})`);
+      return;
+    }
 
     const btn = document.getElementById('wd-submit-btn');
     btn.disabled = true;
@@ -2315,23 +2374,22 @@
       const res = await fetch(`${API}/withdrawals`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
-        body: JSON.stringify({ amount: parseFloat(amount), bankName, accountName, accountNumber, bankCode })
+        body: JSON.stringify({
+          amount: parseFloat(amount),
+          currency: wdSelectedCurrency,
+          correspondent: wdSelectedCorrespondent,
+          bankName, accountName, accountNumber, bankCode
+        })
       });
       const data = await res.json();
-
       const resultEl = document.getElementById('withdrawal-form-result');
       resultEl.style.display = 'block';
-
       if (data.success) {
         resultEl.style.background = 'var(--success-bg)';
         resultEl.style.color = 'var(--success)';
         resultEl.style.border = '1px solid rgba(26,122,60,.2)';
         resultEl.textContent = '✅ ' + data.message;
-        setTimeout(() => {
-          closeWithdrawalModal();
-          loadWithdrawals();
-          loadStats();
-        }, 2000);
+        setTimeout(() => { closeWithdrawalModal(); loadWithdrawals(); loadStats(); }, 2000);
       } else {
         resultEl.style.background = 'var(--danger-bg)';
         resultEl.style.color = 'var(--danger)';
@@ -2341,7 +2399,6 @@
     } catch (err) {
       alert('Erreur de connexion');
     }
-
     btn.disabled = false;
     btn.textContent = 'Envoyer la demande';
   }
@@ -2499,45 +2556,58 @@
 
 <!-- MODAL VIREMENT -->
 <div id="withdrawal-modal" style="display:none;position:fixed;inset:0;background:rgba(26,26,24,.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:28px;box-shadow:0 24px 64px rgba(0,0,0,.15)">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;padding:28px;box-shadow:0 24px 64px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div>
         <div style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:4px">NDSGPay</div>
         <div style="font-family:var(--serif);font-size:20px;font-weight:400;color:var(--text)">Demander un virement</div>
       </div>
-      <button onclick="closeWithdrawalModal()" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:18px;color:var(--text-muted)">×</button>
+      <button onclick="closeWithdrawalModal()" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:18px;color:var(--text-muted)">x</button>
     </div>
 
-    <div style="background:var(--blue-light);border:1px solid rgba(26,95,180,.2);border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--blue)">
-      💡 Votre solde disponible sera déduit dès la soumission. Le virement sera exécuté sous 24-48h ouvrées.
+    <!-- Etape 1 : choisir le correspondant -->
+    <div id="wd-step1">
+      <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">Soldes disponibles par operateur</div>
+      <div id="wd-balances-list" style="margin-bottom:20px">
+        <div style="color:var(--text-muted);font-size:13px">Chargement...</div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="closeWithdrawalModal()" style="flex:1;padding:11px;border-radius:8px;border:1px solid var(--border-strong);background:transparent;cursor:pointer;font-family:var(--sans);font-size:14px">Annuler</button>
+      </div>
     </div>
 
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Montant (XAF) *</label>
-      <input type="number" id="wd-amount" placeholder="Ex: 50000" style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none" />
-    </div>
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Nom de la banque *</label>
-      <input type="text" id="wd-bank" placeholder="Ex: BGFI Bank, UGB, Ecobank..." style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none" />
-    </div>
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Nom du titulaire du compte *</label>
-      <input type="text" id="wd-name" placeholder="Ex: NDSG Services SARL" style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none" />
-    </div>
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Numéro de compte / RIB *</label>
-      <input type="text" id="wd-number" placeholder="Ex: GA021 00001 00000 12345678901 79" style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none" />
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Code banque (optionnel)</label>
-      <input type="text" id="wd-code" placeholder="Ex: 00001" style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none" />
-    </div>
+    <!-- Etape 2 : formulaire bancaire -->
+    <div id="wd-step2" style="display:none">
+      <div id="wd-corr-summary" style="background:var(--blue-light);border:1px solid rgba(26,95,180,.2);border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:13px;color:var(--blue)"></div>
 
-    <div id="withdrawal-form-result" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px"></div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Montant *</label>
+        <input type="number" id="wd-amount" placeholder="Ex: 50000" style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none;box-sizing:border-box" />
+        <div id="wd-amount-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Nom de la banque *</label>
+        <input type="text" id="wd-bank" placeholder="Ex: BGFI Bank, UGB, Ecobank..." style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none;box-sizing:border-box" />
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Nom du titulaire *</label>
+        <input type="text" id="wd-name" placeholder="Ex: NDSG Services SARL" style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none;box-sizing:border-box" />
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Numero de compte / RIB *</label>
+        <input type="text" id="wd-number" placeholder="Ex: GA021 00001 00000 12345678901 79" style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none;box-sizing:border-box" />
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Code banque (optionnel)</label>
+        <input type="text" id="wd-code" placeholder="Ex: 00001" style="width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--border-strong);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none;box-sizing:border-box" />
+      </div>
 
-    <div style="display:flex;gap:10px">
-      <button onclick="closeWithdrawalModal()" style="flex:1;padding:11px;border-radius:8px;border:1px solid var(--border-strong);background:transparent;cursor:pointer;font-family:var(--sans);font-size:14px">Annuler</button>
-      <button id="wd-submit-btn" onclick="submitWithdrawal()" style="flex:2;padding:11px;border-radius:8px;background:var(--blue);color:#fff;border:none;cursor:pointer;font-family:var(--sans);font-size:14px;font-weight:500">Envoyer la demande</button>
+      <div id="withdrawal-form-result" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px"></div>
+
+      <div style="display:flex;gap:10px">
+        <button onclick="backToStep1()" style="flex:1;padding:11px;border-radius:8px;border:1px solid var(--border-strong);background:transparent;cursor:pointer;font-family:var(--sans);font-size:14px">Retour</button>
+        <button id="wd-submit-btn" onclick="submitWithdrawal()" style="flex:2;padding:11px;border-radius:8px;background:var(--blue);color:#fff;border:none;cursor:pointer;font-family:var(--sans);font-size:14px;font-weight:500">Envoyer la demande</button>
+      </div>
     </div>
   </div>
 </div>
