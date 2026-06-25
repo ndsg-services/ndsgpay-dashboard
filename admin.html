@@ -219,12 +219,15 @@
       <div class="table-card">
         <div class="table-header">
           <div class="table-title">Demandes de virement</div>
-          <div class="filters">
-            <button class="filter-btn active" onclick="filterWithdrawals(this,'all')">Toutes</button>
-            <button class="filter-btn" onclick="filterWithdrawals(this,'PENDING')">En attente</button>
-            <button class="filter-btn" onclick="filterWithdrawals(this,'VALIDATED')">Validées</button>
-            <button class="filter-btn" onclick="filterWithdrawals(this,'EXECUTED')">Exécutées</button>
-            <button class="filter-btn" onclick="filterWithdrawals(this,'REJECTED')">Rejetées</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="filters">
+              <button class="filter-btn active" onclick="filterWithdrawals(this,'all')">Toutes</button>
+              <button class="filter-btn" onclick="filterWithdrawals(this,'PENDING')">En attente</button>
+              <button class="filter-btn" onclick="filterWithdrawals(this,'VALIDATED')">Validées</button>
+              <button class="filter-btn" onclick="filterWithdrawals(this,'EXECUTED')">Exécutées</button>
+              <button class="filter-btn" onclick="filterWithdrawals(this,'REJECTED')">Rejetées</button>
+            </div>
+            <button onclick="exportWithdrawalsCSV()" style="padding:5px 12px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--sans);white-space:nowrap">⬇ CSV</button>
           </div>
         </div>
         <div id="withdrawals-body">
@@ -409,7 +412,10 @@
     loadWithdrawals(status);
   }
 
+  let allWithdrawalsData = [];
+
   function renderWithdrawals(withdrawals) {
+    allWithdrawalsData = withdrawals;
     if (withdrawals.length === 0) {
       document.getElementById('withdrawals-body').innerHTML = '<div class="empty">Aucune demande de virement</div>';
       return;
@@ -417,14 +423,22 @@
 
     const statusLabel = { PENDING: 'En attente', VALIDATED: 'Validé', EXECUTED: 'Exécuté', REJECTED: 'Rejeté' };
     const statusClass = { PENDING: 'pending', VALIDATED: 'pending', EXECUTED: 'active', REJECTED: '' };
+    const fmt = n => n != null ? new Intl.NumberFormat('fr-FR').format(Math.round(n)) : '—';
 
-    const rows = withdrawals.map(w => `
+    const rows = withdrawals.map(w => {
+      const ecart = (w.balanceAfter != null && w.executedBalance != null)
+        ? Math.round(w.executedBalance - w.balanceAfter) : null;
+      const ecartColor = ecart === null ? '' : ecart === 0 ? 'color:var(--success)' : 'color:var(--warning)';
+      return `
       <tr>
         <td><strong>${w.merchant?.name || '—'}</strong><br/><span class="td-muted" style="font-size:11px">${w.merchant?.email || ''}</span></td>
-        <td style="font-weight:500">${formatXAF(w.amount)} XAF</td>
-        <td>${w.bankName}</td>
-        <td class="td-muted">${w.accountName}</td>
-        <td class="td-mono">${w.accountNumber}</td>
+        <td style="font-size:11px;color:var(--text-muted)">${w.correspondent || '—'}</td>
+        <td style="font-weight:600">${fmt(w.amount)} ${w.currency || 'XAF'}</td>
+        <td style="font-size:12px">${fmt(w.balanceBefore)}</td>
+        <td style="font-size:12px">${fmt(w.balanceAfter)}</td>
+        <td style="font-size:12px;${ecartColor}">${ecart === null ? '—' : ecart === 0 ? '✓ 0' : (ecart > 0 ? '+' : '') + fmt(ecart)}</td>
+        <td style="font-size:12px">${w.bankName}</td>
+        <td class="td-mono" style="font-size:11px">${w.accountNumber}</td>
         <td><span class="badge ${statusClass[w.status]}" style="${w.status === 'REJECTED' ? 'background:var(--danger-bg);color:var(--danger)' : ''}">${statusLabel[w.status]}</span></td>
         <td class="td-muted">${new Date(w.requestedAt).toLocaleDateString('fr-FR')}</td>
         <td>
@@ -438,16 +452,53 @@
           ${w.status === 'EXECUTED' ? '<span class="td-muted" style="font-size:12px">✅ Fait</span>' : ''}
           ${w.status === 'REJECTED' ? '<span class="td-muted" style="font-size:12px">❌ Rejeté</span>' : ''}
         </td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
 
     document.getElementById('withdrawals-body').innerHTML = `
+      <div style="overflow-x:auto">
       <table>
         <thead><tr>
-          <th>Marchand</th><th>Montant</th><th>Banque</th><th>Titulaire</th><th>N° Compte</th><th>Statut</th><th>Date</th><th>Action</th>
+          <th>Marchand</th><th>Correspondant</th><th>Montant</th><th>Solde avant</th><th>Solde après</th><th>Écart</th><th>Banque</th><th>N° Compte</th><th>Statut</th><th>Date</th><th>Action</th>
         </tr></thead>
         <tbody>${rows}</tbody>
-      </table>`;
+      </table>
+      </div>`;
+  }
+
+  function exportWithdrawalsCSV() {
+    if (!allWithdrawalsData.length) { alert('Aucune donnée à exporter'); return; }
+    const headers = ['Date demande','Marchand','Email','Correspondant','Devise','Montant','Solde avant','Solde apres','Solde a execution','Ecart','Banque','Titulaire','N Compte','Code banque','Statut','Date validation','Date execution','Note admin'];
+    const rows = allWithdrawalsData.map(w => {
+      const ecart = (w.balanceAfter != null && w.executedBalance != null)
+        ? Math.round(w.executedBalance - w.balanceAfter) : '';
+      return [
+        new Date(w.requestedAt).toISOString(),
+        w.merchant?.name || '',
+        w.merchant?.email || '',
+        w.correspondent || '',
+        w.currency || 'XAF',
+        w.amount,
+        w.balanceBefore ?? '',
+        w.balanceAfter ?? '',
+        w.executedBalance ?? '',
+        ecart,
+        w.bankName,
+        w.accountName,
+        w.accountNumber,
+        w.bankCode || '',
+        w.status,
+        w.validatedAt ? new Date(w.validatedAt).toISOString() : '',
+        w.executedAt  ? new Date(w.executedAt).toISOString()  : '',
+        w.note || ''
+      ];
+    });
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `ndsgpay-virements-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
   }
 
   async function changeWithdrawalStatus(id, status) {
