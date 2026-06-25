@@ -1214,21 +1214,44 @@
   });
 
   // ── PANELS ──────────────────────────────────────────────────
-  const panels = {
-    overview:     { id: 'panel-overview',     title: "Vue d'<em>ensemble</em>" },
-    transactions: { id: 'panel-transactions', title: "Transactions" },
-    withdrawals:  { id: 'panel-withdrawals',  title: "Virements" },
-    analytics:    { id: 'panel-analytics',    title: "Analytics" },
-    apikeys:      { id: 'panel-apikeys',      title: "Clés <em>API</em>" },
-    docs:         { id: 'panel-docs',         title: "Documentation" },
-    settings:     { id: 'panel-settings',     title: "Paramètres" },
+  const PANEL_TITLES = {
+    fr: {
+      overview:     "Vue d'<em>ensemble</em>",
+      transactions: "Transactions",
+      withdrawals:  "Virements",
+      analytics:    "Analytics",
+      apikeys:      "Clés <em>API</em>",
+      docs:         "Documentation",
+      settings:     "Paramètres",
+    },
+    en: {
+      overview:     "<em>Overview</em>",
+      transactions: "Transactions",
+      withdrawals:  "Payouts",
+      analytics:    "Analytics",
+      apikeys:      "<em>API</em> Keys",
+      docs:         "Documentation",
+      settings:     "Settings",
+    }
   };
+  const panels = {
+    overview:     { id: 'panel-overview'     },
+    transactions: { id: 'panel-transactions' },
+    withdrawals:  { id: 'panel-withdrawals'  },
+    analytics:    { id: 'panel-analytics'    },
+    apikeys:      { id: 'panel-apikeys'      },
+    docs:         { id: 'panel-docs'         },
+    settings:     { id: 'panel-settings'     },
+  };
+  let activePanel = 'overview';
 
   function showPanel(name) {
+    activePanel = name;
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(panels[name].id).classList.add('active');
-    document.getElementById('topbar-title').innerHTML = panels[name].title;
+    const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
+    document.getElementById('topbar-title').innerHTML = (PANEL_TITLES[lang] || PANEL_TITLES['fr'])[name] || name;
     document.querySelectorAll('.nav-item').forEach(btn => {
       if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(name)) {
         btn.classList.add('active');
@@ -1358,6 +1381,8 @@
     initChartLabels();
     loadStats();
     loadSettings(merchant);
+    // Appliquer la langue sauvegardée après chargement de l'app
+    dashApplyLang(localStorage.getItem('ndsgpayDashLang') || 'fr');
     // Afficher l'URL webhook dans le bloc Clés API
     const whDisplay = document.getElementById('webhook-url-display');
     if (whDisplay) {
@@ -1486,6 +1511,11 @@
         el.textContent = DASH_I18N[lang][key];
       }
     });
+    // Mettre à jour le titre topbar du panel actif
+    const titleEl = document.getElementById('topbar-title');
+    if (titleEl && activePanel && PANEL_TITLES[lang]) {
+      titleEl.innerHTML = PANEL_TITLES[lang][activePanel] || PANEL_TITLES['fr'][activePanel];
+    }
     document.getElementById('dash-lang-fr').classList.toggle('active', lang === 'fr');
     document.getElementById('dash-lang-en').classList.toggle('active', lang === 'en');
   }
@@ -1687,16 +1717,42 @@
 
       const s = data.stats;
 
-      // KPIs overview
-      updateKPI('kpi-volume', formatAmount(s.totalVolume, 'XAF'));
+      // KPIs overview — multi-currency
+      const currencies = s.currencies || ['XAF'];
+      const bbc = s.balancesByCurrency || {};
+      if (currencies.length > 1) {
+        const volEl = document.getElementById('kpi-volume');
+        if (volEl) volEl.innerHTML = currencies.map(cur => {
+          const b = bbc[cur]; if (!b) return '';
+          const amt = new Intl.NumberFormat('fr-FR').format(Math.round(b.depositVolume + b.payoutVolume));
+          return `<div style="font-size:${currencies.length > 2 ? '16px' : '20px'};line-height:1.5">${amt} <span style="font-size:11px;color:var(--text-muted)">${cur}</span></div>`;
+        }).join('');
+      } else {
+        const cur = currencies[0] || 'XAF';
+        const b = bbc[cur];
+        updateKPI('kpi-volume', b ? formatAmount(b.depositVolume + b.payoutVolume, cur) : `0 ${cur}`);
+      }
       updateKPI('kpi-tx', s.totalTransactions.toString());
       updateKPI('kpi-rate', s.successRate !== null ? `${s.successRate}%` : '—');
 
-      // KPIs analytics
-      updateKPI('kpi-deposit-vol', formatAmount(s.deposits.volume, 'XAF'));
-      updateKPI('kpi-payout-vol', formatAmount(s.payouts.volume, 'XAF'));
+      // KPIs analytics — multi-currency
+      if (currencies.length > 1) {
+        const makeMulti = (field) => currencies.map(cur => {
+          const b = bbc[cur]; if (!b) return '';
+          const amt = new Intl.NumberFormat('fr-FR').format(Math.round(b[field] || 0));
+          return `<div style="font-size:${currencies.length > 2 ? '16px' : '20px'};line-height:1.5">${amt} <span style="font-size:11px;color:var(--text-muted)">${cur}</span></div>`;
+        }).join('');
+        const dEl = document.getElementById('kpi-deposit-vol'); if (dEl) dEl.innerHTML = makeMulti('depositVolume');
+        const pEl = document.getElementById('kpi-payout-vol');  if (pEl) pEl.innerHTML = makeMulti('payoutVolume');
+        const fEl = document.getElementById('kpi-fees-2');      if (fEl) fEl.innerHTML = makeMulti('fees');
+      } else {
+        const cur = currencies[0] || 'XAF';
+        const b = bbc[cur];
+        updateKPI('kpi-deposit-vol', b ? formatAmount(b.depositVolume, cur) : `0 ${cur}`);
+        updateKPI('kpi-payout-vol',  b ? formatAmount(b.payoutVolume,  cur) : `0 ${cur}`);
+        updateKPI('kpi-fees-2',      b ? formatAmount(b.fees,          cur) : `0 ${cur}`);
+      }
       updateKPI('kpi-rate-2', s.successRate !== null ? `${s.successRate}%` : '—');
-      updateKPI('kpi-fees-2', formatAmount(s.fees, 'XAF'));
 
       // Taux d'échec par opérateur
       renderFailureStats(s);
@@ -1767,14 +1823,24 @@
       if (kpiGrid) kpiGrid.after(currencyBlock);
     }
 
+    const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
+    const h = {
+      title:    lang === 'en' ? 'Balances by currency'   : 'Soldes par devise',
+      cur:      lang === 'en' ? 'Currency'               : 'Devise',
+      dep:      lang === 'en' ? 'Collection'             : 'Collecté',
+      pay:      lang === 'en' ? 'Payout'                 : 'Payout',
+      fees:     lang === 'en' ? 'Fees'                   : 'Frais',
+      wd:       lang === 'en' ? 'Withdrawals'            : 'Virements',
+      bal:      lang === 'en' ? 'Available balance'      : 'Solde disponible',
+    };
     currencyBlock.innerHTML = `
       <div class="chart-card">
         <div class="chart-header">
-          <div class="chart-title" data-i18n="chart-balance">Soldes par devise</div>
+          <div class="chart-title" data-i18n="chart-balance">${h.title}</div>
         </div>
         <table>
           <thead><tr>
-            <th>Devise</th><th>Collecté</th><th>Payout</th><th>Frais</th><th>Virements</th><th>Solde disponible</th>
+            <th>${h.cur}</th><th>${h.dep}</th><th>${h.pay}</th><th>${h.fees}</th><th>${h.wd}</th><th>${h.bal}</th>
           </tr></thead>
           <tbody>
             ${currencies.map(cur => {
@@ -1804,14 +1870,23 @@
       currencyBlock.after(corrBlock);
     }
 
+    const hc = {
+      title: lang === 'en' ? 'Breakdown by country & operator' : 'Répartition par pays & opérateur',
+      country: lang === 'en' ? 'Country'   : 'Pays',
+      cur:     lang === 'en' ? 'Currency'  : 'Devise',
+      dep:     lang === 'en' ? 'Collection': 'Collecté',
+      pay:     'Payout',
+      fees:    lang === 'en' ? 'Fees'      : 'Frais',
+      bal:     lang === 'en' ? 'Available' : 'Solde disponible',
+    };
     corrBlock.innerHTML = `
       <div class="chart-card">
         <div class="chart-header">
-          <div class="chart-title" data-i18n="chart-country">Répartition par pays &amp; opérateur</div>
+          <div class="chart-title" data-i18n="chart-country">${hc.title}</div>
         </div>
         <table>
           <thead><tr>
-            <th>Pays</th><th data-i18n="col-operator">Opérateur</th><th>Devise</th><th>Collecté</th><th>Payout</th><th>Frais</th><th>Solde disponible</th>
+            <th>${hc.country}</th><th>${lang === 'en' ? 'Operator' : 'Opérateur'}</th><th>${hc.cur}</th><th>${hc.dep}</th><th>${hc.pay}</th><th>${hc.fees}</th><th>${hc.bal}</th>
           </tr></thead>
           <tbody>
             ${correspondents.map(corr => {
@@ -1865,15 +1940,16 @@
       </tr>`;
     }).join('');
 
+    const flang = localStorage.getItem('ndsgpayDashLang') || 'fr';
     failBlock.innerHTML = `
       <div class="chart-card">
         <div class="chart-header">
-          <div class="chart-title">Taux d'échec par opérateur</div>
-          <div style="font-size:11px;color:var(--text-muted)">Depuis le début</div>
+          <div class="chart-title">${flang === 'en' ? 'Failure rate by operator' : "Taux d'échec par opérateur"}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${flang === 'en' ? 'All time' : 'Depuis le début'}</div>
         </div>
         <table>
           <thead><tr>
-            <th>Pays</th><th data-i18n="col-operator">Opérateur</th><th>Total</th><th>Réussies</th><th>Échouées</th><th>Taux d'échec</th>
+            <th>${flang === 'en' ? 'Country' : 'Pays'}</th><th>${flang === 'en' ? 'Operator' : 'Opérateur'}</th><th>Total</th><th>${flang === 'en' ? 'Success' : 'Réussies'}</th><th>${flang === 'en' ? 'Failed' : 'Échouées'}</th><th>${flang === 'en' ? 'Failure rate' : "Taux d'échec"}</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -2003,17 +2079,22 @@
       return;
     }
 
-    const rows = txs.map(tx => `
+    const rows = txs.map(tx => {
+      const txlang = localStorage.getItem('ndsgpayDashLang') || 'fr';
+      const txType = tx.type === 'deposit'
+        ? `📥 ${txlang === 'en' ? 'Collection' : 'Collecte'}`
+        : `📤 Payout`;
+      return `
       <tr>
         <td class="td-mono">${tx.type === 'deposit' ? tx.depositId?.slice(0,8) : tx.payoutId?.slice(0,8)}...</td>
-        <td>${tx.type === 'deposit' ? '📥 Collecte' : '📤 Payout'}</td>
+        <td>${txType}</td>
         <td>${tx.correspondent || '—'}</td>
         <td>${tx.msisdn}</td>
-        <td style="font-weight:500">${formatXAF(tx.amount)}</td>
+        <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(Math.round(tx.amount))} ${tx.currency || 'XAF'}</td>
         <td><span class="badge ${tx.status.toLowerCase()}">${tx.status}</span></td>
         <td class="td-muted">${new Date(tx.createdAt).toLocaleDateString('fr-FR')}</td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
 
     container.innerHTML = `
       <div class="table-header">
