@@ -473,8 +473,9 @@
     </div>
   </div>
 
-  <div class="pos-footer">
-    <button class="btn-primary" id="pos-btn" onclick="initiateTx()">Encaisser</button>
+  <div class="pos-footer" style="display:flex;gap:8px">
+    <button class="btn-primary" id="pos-btn" onclick="initiateTx()" style="flex:2">Encaisser</button>
+    <button class="btn-secondary" onclick="showHistory()" style="flex:1;padding:16px;font-size:13px">📋</button>
   </div>
 </div>
 
@@ -516,6 +517,30 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- Modal Historique -->
+<div id="history-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;flex-direction:column">
+  <div style="background:var(--surface);flex:1;margin-top:60px;border-radius:20px 20px 0 0;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 20px 16px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:16px;font-weight:700">Historique de session</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="history-count">0 transaction</div>
+      </div>
+      <button onclick="closeHistory()" style="background:var(--surface2);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div id="history-list" style="flex:1;overflow-y:auto;padding:12px 16px"></div>
+    <div style="padding:16px 20px;border-top:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span style="color:var(--text-muted)">Total encaissé</span>
+        <span id="history-total-collect" style="font-weight:600;color:var(--green)">0 XAF</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:var(--text-muted)">Total envoyé</span>
+        <span id="history-total-payout" style="font-weight:600;color:var(--orange)">0 XAF</span>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   // ── Config ───────────────────────────────────────────────────
@@ -735,8 +760,9 @@
 
       if (data.success) {
         currentTxId = currentMode === 'collect' ? data.depositId : data.payoutId;
+        const txData = { amount, currency: op.currency, msisdn, operator: op.name, createdAt: new Date().toISOString() };
         showStatusScreen(amount, op, msisdn);
-        startPolling(currentMode, currentTxId);
+        startPolling(currentMode, currentTxId, txData);
       } else {
         showToast(data.error || 'Erreur');
         btn.disabled = false;
@@ -767,16 +793,16 @@
   }
 
   // ── Polling statut ────────────────────────────────────────────
-  function startPolling(mode, txId) {
+  function startPolling(mode, txId, txData) {
     if (pollInterval) clearInterval(pollInterval);
     let attempts = 0;
-    const maxAttempts = 40; // 2 minutes max (40 × 3s)
+    const maxAttempts = 40;
 
     pollInterval = setInterval(async () => {
       attempts++;
       if (attempts > maxAttempts) {
         clearInterval(pollInterval);
-        setStatusFailed('Délai dépassé. La transaction a expiré.');
+        setStatusFailed('Délai dépassé. La transaction a expiré.', txData);
         return;
       }
 
@@ -793,17 +819,17 @@
 
         if (status === 'COMPLETED') {
           clearInterval(pollInterval);
-          setStatusSuccess(mode);
+          setStatusSuccess(mode, txData);
         } else if (status === 'FAILED' || status === 'DUPLICATE_IGNORED') {
           clearInterval(pollInterval);
-          setStatusFailed('Transaction échouée. ' + (tx?.failureMessage || ''));
+          setStatusFailed('Transaction échouée. ' + (tx?.failureMessage || ''), txData);
         }
-        // INITIATED / SUBMITTED → on continue à poller
       } catch (e) { /* réseau — on réessaie */ }
     }, 3000);
   }
 
-  function setStatusSuccess(mode) {
+  function setStatusSuccess(mode, tx) {
+    addToHistory({ ...tx, status: 'COMPLETED', mode });
     document.getElementById('status-icon').className    = 'status-icon success';
     document.getElementById('status-icon').textContent  = '✅';
     document.getElementById('status-title').textContent = mode === 'collect' ? 'Paiement reçu !' : 'Envoi effectué !';
@@ -815,7 +841,8 @@
     document.getElementById('status-cancel-btn').style.display = 'none';
   }
 
-  function setStatusFailed(msg) {
+  function setStatusFailed(msg, tx) {
+    if (tx) addToHistory({ ...tx, status: 'FAILED', mode: currentMode });
     document.getElementById('status-icon').className    = 'status-icon failed';
     document.getElementById('status-icon').textContent  = '❌';
     document.getElementById('status-title').textContent = 'Transaction échouée';
@@ -845,6 +872,57 @@
     document.getElementById('pos-btn').disabled    = false;
     document.getElementById('pos-btn').textContent = currentMode === 'collect' ? 'Encaisser' : 'Envoyer';
     document.getElementById('amount-currency').textContent = 'XAF';
+  }
+
+  // ── Historique session ────────────────────────────────────────
+  let sessionHistory = [];
+
+  function addToHistory(tx) {
+    sessionHistory.unshift(tx); // plus récent en premier
+  }
+
+  function showHistory() {
+    const list  = document.getElementById('history-list');
+    const count = document.getElementById('history-count');
+    const totalCollect = document.getElementById('history-total-collect');
+    const totalPayout  = document.getElementById('history-total-payout');
+
+    count.textContent = sessionHistory.length + ' transaction' + (sessionHistory.length > 1 ? 's' : '');
+
+    const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
+
+    let sumCollect = 0, sumPayout = 0;
+    sessionHistory.forEach(tx => {
+      if (tx.mode === 'collect') sumCollect += tx.amount;
+      else sumPayout += tx.amount;
+    });
+
+    totalCollect.textContent = fmt(sumCollect) + ' ' + (sessionHistory[0]?.currency || 'XAF');
+    totalPayout.textContent  = fmt(sumPayout)  + ' ' + (sessionHistory[0]?.currency || 'XAF');
+
+    if (sessionHistory.length === 0) {
+      list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0">Aucune transaction dans cette session</div>';
+    } else {
+      list.innerHTML = sessionHistory.map(tx => {
+        const icon   = tx.mode === 'collect' ? '📥' : '📤';
+        const color  = tx.status === 'COMPLETED' ? 'var(--green)' : tx.status === 'FAILED' ? 'var(--red)' : 'var(--orange)';
+        const status = tx.status === 'COMPLETED' ? '✓' : tx.status === 'FAILED' ? '✗' : '…';
+        const time   = new Date(tx.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:13px;font-weight:500">${icon} ${fmt(tx.amount)} ${tx.currency}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${tx.msisdn} · ${tx.operator} · ${time}</div>
+          </div>
+          <span style="font-size:16px;color:${color};font-weight:700">${status}</span>
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('history-modal').style.display = 'flex';
+  }
+
+  function closeHistory() {
+    document.getElementById('history-modal').style.display = 'none';
   }
 
   // ── Toast ─────────────────────────────────────────────────────
