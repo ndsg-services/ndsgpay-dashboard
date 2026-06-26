@@ -919,7 +919,10 @@
     const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
     count.textContent = sessionHistory.length + ' transaction' + (sessionHistory.length > 1 ? 's' : '');
     let sumCollect = 0, sumPayout = 0;
-    sessionHistory.forEach(tx => { if (tx.mode === 'collect') sumCollect += tx.amount; else sumPayout += tx.amount; });
+    sessionHistory.forEach(tx => {
+      if (tx.status !== 'COMPLETED') return;
+      if (tx.mode === 'collect') sumCollect += tx.amount; else sumPayout += tx.amount;
+    });
     totalCollect.textContent = fmt(sumCollect) + ' XAF';
     totalPayout.textContent  = fmt(sumPayout)  + ' XAF';
     if (sessionHistory.length === 0) {
