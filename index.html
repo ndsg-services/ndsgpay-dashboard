@@ -2654,9 +2654,9 @@
           '<td style="padding:8px 0;font-size:11px;color:var(--text-muted)">' + lastUsed + '</td>' +
           '<td style="padding:8px 0"><span style="background:' + statusBg + ';color:' + statusColor + ';padding:1px 8px;border-radius:20px;font-size:10px;font-weight:600">' + statusTxt + '</span></td>' +
           '<td style="padding:8px 0;text-align:right">' +
-            '<button class="btn-sm" onclick="showQRCode('' + k.id + '','' + lbl + '')" style="font-size:11px;margin-right:4px">QR</button>' +
-            '<button class="btn-sm" onclick="togglePosKey('' + k.id + '',' + (!k.isActive) + ')" style="font-size:11px;margin-right:4px">' + (k.isActive ? (lang === 'en' ? 'Disable' : 'Désactiver') : (lang === 'en' ? 'Enable' : 'Activer')) + '</button>' +
-            '<button class="btn-sm" onclick="deletePosKey('' + k.id + '','' + lbl + '')" style="font-size:11px;color:var(--danger)">✕</button>' +
+            '<button class="btn-sm" data-id="' + k.id + '" data-lbl="' + lbl + '" onclick="showQRCode(this.getAttribute(\'data-id\'),this.getAttribute(\'data-lbl\'))" style="font-size:11px;margin-right:4px">QR</button> ' +
+            '<button class="btn-sm" data-id="' + k.id + '" data-val="' + (!k.isActive) + '" onclick="togglePosKey(this.getAttribute(\'data-id\'),this.getAttribute(\'data-val\')===\'true\')" style="font-size:11px;margin-right:4px">' + (k.isActive ? (lang === 'en' ? 'Disable' : 'Désactiver') : (lang === 'en' ? 'Enable' : 'Activer')) + '</button> ' +
+            '<button class="btn-sm" data-id="' + k.id + '" data-lbl="' + lbl + '" onclick="deletePosKey(this.getAttribute(\'data-id\'),this.getAttribute(\'data-lbl\'))" style="font-size:11px;color:var(--danger)">✕</button>' +
           '</td>' +
         '</tr>';
       }).join('');
