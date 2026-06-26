@@ -601,6 +601,7 @@
       posKey = saved;
       posLabel = localStorage.getItem('ndsgpos_label') || 'Caisse';
       merchantName = localStorage.getItem('ndsgpos_merchant') || '';
+      posKeyId = localStorage.getItem('ndsgpos_keyid') || '';
       posScope = JSON.parse(localStorage.getItem('ndsgpos_scope') || '{"deposit":true,"payout":false}');
       enterPOS();
     }
@@ -643,14 +644,16 @@
       posKey       = key;
       posLabel     = new URLSearchParams(window.location.search).get('label') || 'Caisse POS';
       merchantName = merchantData.success ? merchantData.merchant.name : '';
+      posKeyId     = merchantData.success ? (merchantData.posKeyId || '') : '';
       posScope     = {
-        deposit: true,  // les clés POS deposit-only peuvent lister les dépôts
+        deposit: true,
         payout:  merchantData.success ? (merchantData.merchant.scopePayout || false) : false
       };
 
       localStorage.setItem('ndsgpos_key',      posKey);
       localStorage.setItem('ndsgpos_label',     posLabel);
       localStorage.setItem('ndsgpos_merchant',  merchantName);
+      localStorage.setItem('ndsgpos_keyid',     posKeyId);
       localStorage.setItem('ndsgpos_scope',     JSON.stringify(posScope));
 
       enterPOS();
@@ -876,49 +879,83 @@
 
   // ── Historique session ────────────────────────────────────────
   let sessionHistory = [];
+  let posKeyId = ''; // ID de la clé POS (pas la valeur sk_pos_)
 
   function addToHistory(tx) {
-    sessionHistory.unshift(tx); // plus récent en premier
+    sessionHistory.unshift(tx);
   }
 
-  function showHistory() {
+  async function showHistory() {
     const list  = document.getElementById('history-list');
     const count = document.getElementById('history-count');
     const totalCollect = document.getElementById('history-total-collect');
     const totalPayout  = document.getElementById('history-total-payout');
+    document.getElementById('history-modal').style.display = 'flex';
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0">Chargement...</div>';
 
-    count.textContent = sessionHistory.length + ' transaction' + (sessionHistory.length > 1 ? 's' : '');
+    try {
+      // Essayer l'API d'abord si on a le posKeyId
+      if (posKeyId) {
+        const res  = await fetch(API + '/pos-keys/' + posKeyId + '/transactions?date=today', {
+          headers: { 'Authorization': 'Bearer ' + posKey }
+        });
+        const data = await res.json();
+        if (data.success) {
+          renderHistory(data.transactions, data.summary);
+          return;
+        }
+      }
+    } catch (e) { /* fallback sur mémoire */ }
 
+    // Fallback : historique en mémoire
     const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
-
+    count.textContent = sessionHistory.length + ' transaction' + (sessionHistory.length > 1 ? 's' : '');
     let sumCollect = 0, sumPayout = 0;
-    sessionHistory.forEach(tx => {
-      if (tx.mode === 'collect') sumCollect += tx.amount;
-      else sumPayout += tx.amount;
-    });
-
-    totalCollect.textContent = fmt(sumCollect) + ' ' + (sessionHistory[0]?.currency || 'XAF');
-    totalPayout.textContent  = fmt(sumPayout)  + ' ' + (sessionHistory[0]?.currency || 'XAF');
-
+    sessionHistory.forEach(tx => { if (tx.mode === 'collect') sumCollect += tx.amount; else sumPayout += tx.amount; });
+    totalCollect.textContent = fmt(sumCollect) + ' XAF';
+    totalPayout.textContent  = fmt(sumPayout)  + ' XAF';
     if (sessionHistory.length === 0) {
       list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0">Aucune transaction dans cette session</div>';
     } else {
       list.innerHTML = sessionHistory.map(tx => {
-        const icon   = tx.mode === 'collect' ? '📥' : '📤';
-        const color  = tx.status === 'COMPLETED' ? 'var(--green)' : tx.status === 'FAILED' ? 'var(--red)' : 'var(--orange)';
-        const status = tx.status === 'COMPLETED' ? '✓' : tx.status === 'FAILED' ? '✗' : '…';
-        const time   = new Date(tx.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const icon  = tx.mode === 'collect' ? '📥' : '📤';
+        const color = tx.status === 'COMPLETED' ? 'var(--green)' : tx.status === 'FAILED' ? 'var(--red)' : 'var(--orange)';
+        const st    = tx.status === 'COMPLETED' ? '✓' : tx.status === 'FAILED' ? '✗' : '…';
+        const time  = new Date(tx.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
-          <div>
-            <div style="font-size:13px;font-weight:500">${icon} ${fmt(tx.amount)} ${tx.currency}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${tx.msisdn} · ${tx.operator} · ${time}</div>
-          </div>
-          <span style="font-size:16px;color:${color};font-weight:700">${status}</span>
-        </div>`;
+          <div><div style="font-size:13px;font-weight:500">${icon} ${new Intl.NumberFormat('fr-FR').format(tx.amount)} ${tx.currency}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${tx.msisdn} · ${tx.operator} · ${time}</div></div>
+          <span style="font-size:16px;color:${color};font-weight:700">${st}</span></div>`;
       }).join('');
     }
+  }
 
-    document.getElementById('history-modal').style.display = 'flex';
+  function renderHistory(transactions, summary) {
+    const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
+    const count = document.getElementById('history-count');
+    const totalCollect = document.getElementById('history-total-collect');
+    const totalPayout  = document.getElementById('history-total-payout');
+    const list  = document.getElementById('history-list');
+
+    count.textContent = summary.count + ' transaction' + (summary.count > 1 ? 's' : '') + " aujourd'hui";
+    totalCollect.textContent = fmt(summary.totalCollect) + ' XAF';
+    totalPayout.textContent  = fmt(summary.totalPayout)  + ' XAF';
+
+    if (transactions.length === 0) {
+      list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0">Aucune transaction aujourd\'hui</div>';
+      return;
+    }
+
+    list.innerHTML = transactions.map(tx => {
+      const icon  = tx.type === 'deposit' ? '📥' : '📤';
+      const color = tx.status === 'COMPLETED' ? 'var(--green)' : tx.status === 'FAILED' ? 'var(--red)' : 'var(--orange)';
+      const st    = tx.status === 'COMPLETED' ? '✓' : tx.status === 'FAILED' ? '✗' : '…';
+      const time  = new Date(tx.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:13px;font-weight:500">${icon} ${fmt(tx.amount)} ${tx.currency}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${tx.msisdn} · ${tx.correspondent} · ${time}</div></div>
+        <span style="font-size:16px;color:${color};font-weight:700">${st}</span></div>`;
+    }).join('');
   }
 
   function closeHistory() {
@@ -939,7 +976,8 @@
     localStorage.removeItem('ndsgpos_label');
     localStorage.removeItem('ndsgpos_merchant');
     localStorage.removeItem('ndsgpos_scope');
-    posKey = '';
+    localStorage.removeItem('ndsgpos_keyid');
+    posKey = ''; posKeyId = '';
     document.getElementById('setup-key').value = '';
     document.getElementById('setup-error').textContent = '';
     document.getElementById('setup-btn').disabled = false;
