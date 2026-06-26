@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="NDSGPay POS"/>
+  <meta name="theme-color" content="#2563eb"/>
+  <link rel="manifest" href="/pos-manifest.json"/>
+  <title>NDSGPay POS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:        #2563eb;
+      --blue-dark:   #1d4ed8;
+      --blue-light:  #eff6ff;
+      --green:       #16a34a;
+      --green-light: #f0fdf4;
+      --red:         #dc2626;
+      --red-light:   #fef2f2;
+      --orange:      #d97706;
+      --bg:          #0f172a;
+      --surface:     #1e293b;
+      --surface2:    #273349;
+      --border:      rgba(255,255,255,.08);
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --sans:        -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+    }
+    .screen.active { display: flex; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .header-brand {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -.3px;
+    }
+    .header-brand span { color: var(--blue); }
+    .header-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+    .header-meta strong { color: var(--text); display: block; font-size: 12px; }
+
+    /* ── Setup screen ── */
+    .setup-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      gap: 24px;
+    }
+    .setup-logo {
+      width: 72px;
+      height: 72px;
+      background: var(--blue);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+    .setup-title {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: -.4px;
+    }
+    .setup-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+    .setup-input-group {
+      width: 100%;
+      max-width: 360px;
+    }
+    .setup-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .setup-input {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--sans);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .setup-input:focus { border-color: var(--blue); }
+    .setup-input::placeholder { color: var(--text-muted); }
+
+    .btn-primary {
+      width: 100%;
+      max-width: 360px;
+      padding: 16px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .btn-primary:active { background: var(--blue-dark); transform: scale(.98); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    .setup-error {
+      font-size: 13px;
+      color: var(--red);
+      text-align: center;
+      min-height: 20px;
+    }
+
+    /* ── POS screen ── */
+    .pos-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 20px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .amount-display {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 28px 24px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .amount-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .amount-value {
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      color: var(--text);
+      line-height: 1;
+    }
+    .amount-currency {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-left: 6px;
+    }
+
+    .field-group {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .field-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .field-item:last-child { border-bottom: none; }
+    .field-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .field-input {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 18px;
+      font-family: var(--sans);
+      font-weight: 500;
+      outline: none;
+      width: 100%;
+    }
+    .field-input::placeholder { color: var(--surface2); }
+
+    .operator-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .operator-badge.detected { background: var(--blue-light); color: var(--blue); }
+    .operator-badge.unknown  { background: var(--surface2); color: var(--text-muted); }
+
+    /* Numpad */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .numpad-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      font-size: 22px;
+      font-weight: 500;
+      font-family: var(--sans);
+      padding: 18px;
+      cursor: pointer;
+      transition: background .1s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .numpad-btn:active { background: var(--surface2); transform: scale(.95); }
+    .numpad-btn.delete { font-size: 18px; }
+    .numpad-btn.zero   { grid-column: span 2; }
+
+    .pos-footer {
+      padding: 16px 20px;
+      flex-shrink: 0;
+    }
+
+    /* ── Status screen ── */
+    .status-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      gap: 20px;
+      text-align: center;
+    }
+    .status-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+    .status-icon.pending  { background: var(--surface2); animation: pulse 1.5s infinite; }
+    .status-icon.success  { background: var(--green-light); }
+    .status-icon.failed   { background: var(--red-light); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .5; }
+    }
+
+    .status-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.4px;
+    }
+    .status-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 280px;
+    }
+    .status-amount {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+    .status-detail {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 16px 20px;
+      width: 100%;
+      max-width: 320px;
+      border: 1px solid var(--border);
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 13px;
+    }
+    .status-row-label { color: var(--text-muted); }
+    .status-row-val   { font-weight: 500; }
+
+    .btn-secondary {
+      width: 100%;
+      max-width: 360px;
+      padding: 16px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-secondary:active { background: var(--surface2); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity .3s;
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ── Mode indicator ── */
+    .mode-tabs {
+      display: flex;
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+      border: 1px solid var(--border);
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .mode-tab.active {
+      background: var(--blue);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SCREEN 1 : SETUP ── -->
+<div class="screen active" id="screen-setup">
+  <div class="header">
+    <div class="header-brand">NDSG<span>Pay</span></div>
+    <div class="header-meta">Terminal POS</div>
+  </div>
+  <div class="setup-body">
+    <div class="setup-logo">P</div>
+    <div class="setup-title">Configurer la caisse</div>
+    <div class="setup-desc">Entrez votre clé POS ou scannez le QR code depuis le dashboard marchand.</div>
+
+    <div class="setup-input-group">
+      <label class="setup-label">Clé POS</label>
+      <input class="setup-input" id="setup-key" type="text" placeholder="sk_pos_xxxxxxxxxxxxxxxx" autocomplete="off" autocorrect="off" spellcheck="false"/>
+    </div>
+
+    <div class="setup-error" id="setup-error"></div>
+
+    <button class="btn-primary" id="setup-btn" onclick="setupPOS()">Configurer</button>
+  </div>
+</div>
+
+<!-- ── SCREEN 2 : POS ── -->
+<div class="screen" id="screen-pos">
+  <div class="header">
+    <div class="header-brand">NDSG<span>Pay</span></div>
+    <div class="header-meta">
+      <strong id="pos-label">—</strong>
+      <span id="pos-merchant">—</span>
+    </div>
+  </div>
+
+  <div class="pos-body">
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-collect" onclick="setMode('collect')">📥 Encaisser</button>
+      <button class="mode-tab" id="tab-payout" onclick="setMode('payout')" id="tab-payout">📤 Rendre monnaie</button>
+    </div>
+
+    <!-- Montant -->
+    <div class="amount-display">
+      <div class="amount-label">Montant</div>
+      <div>
+        <span class="amount-value" id="amount-display">0</span>
+        <span class="amount-currency" id="amount-currency">XAF</span>
+      </div>
+    </div>
+
+    <!-- Numéro client -->
+    <div class="field-group">
+      <div class="field-item">
+        <div class="field-label">Numéro mobile client</div>
+        <input class="field-input" id="msisdn-input" type="tel" placeholder="074 XX XX XX" maxlength="15" oninput="onMsisdnChange(this.value)"/>
+        <div class="operator-badge unknown" id="operator-badge">— Opérateur inconnu</div>
+      </div>
+    </div>
+
+    <!-- Numpad -->
+    <div class="numpad">
+      <button class="numpad-btn" onclick="numpad('1')">1</button>
+      <button class="numpad-btn" onclick="numpad('2')">2</button>
+      <button class="numpad-btn" onclick="numpad('3')">3</button>
+      <button class="numpad-btn" onclick="numpad('4')">4</button>
+      <button class="numpad-btn" onclick="numpad('5')">5</button>
+      <button class="numpad-btn" onclick="numpad('6')">6</button>
+      <button class="numpad-btn" onclick="numpad('7')">7</button>
+      <button class="numpad-btn" onclick="numpad('8')">8</button>
+      <button class="numpad-btn" onclick="numpad('9')">9</button>
+      <button class="numpad-btn" onclick="numpad('000')">000</button>
+      <button class="numpad-btn zero" onclick="numpad('0')">0</button>
+      <button class="numpad-btn delete" onclick="numpad('del')">⌫</button>
+    </div>
+  </div>
+
+  <div class="pos-footer">
+    <button class="btn-primary" id="pos-btn" onclick="initiateTx()">Encaisser</button>
+  </div>
+</div>
+
+<!-- ── SCREEN 3 : STATUS ── -->
+<div class="screen" id="screen-status">
+  <div class="header">
+    <div class="header-brand">NDSG<span>Pay</span></div>
+    <div class="header-meta" id="status-header-meta">En cours...</div>
+  </div>
+
+  <div class="status-body">
+    <div class="status-icon pending" id="status-icon">⏳</div>
+    <div class="status-title" id="status-title">En attente</div>
+    <div class="status-desc" id="status-desc">Le client va recevoir une demande sur son téléphone. Veuillez patienter...</div>
+
+    <div class="status-amount" id="status-amount"></div>
+
+    <div class="status-detail" id="status-detail" style="display:none">
+      <div class="status-row">
+        <span class="status-row-label">Numéro</span>
+        <span class="status-row-val" id="detail-msisdn">—</span>
+      </div>
+      <div class="status-row">
+        <span class="status-row-label">Opérateur</span>
+        <span class="status-row-val" id="detail-operator">—</span>
+      </div>
+      <div class="status-row">
+        <span class="status-row-label">Référence</span>
+        <span class="status-row-val" id="detail-ref" style="font-size:11px;font-family:monospace">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-footer">
+    <button class="btn-primary" id="status-new-btn" onclick="newTransaction()" style="display:none">Nouvelle transaction</button>
+    <button class="btn-secondary" id="status-cancel-btn" onclick="cancelTransaction()">Annuler</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Config ───────────────────────────────────────────────────
+  const API = 'https://ndsgpay-backend.vercel.app/api';
+
+  // ── State ────────────────────────────────────────────────────
+  let posKey      = '';
+  let posLabel    = '';
+  let merchantName = '';
+  let posScope    = { deposit: true, payout: false };
+  let amountRaw   = '';
+  let currentMode = 'collect'; // 'collect' | 'payout'
+  let currentTxId = '';
+  let pollInterval = null;
+
+  // ── Opérateurs par préfixe ────────────────────────────────────
+  const OPERATORS = [
+    // Gabon
+    { prefix: ['074', '076', '077'], name: 'Airtel Gabon',   correspondent: 'AIRTEL_GAB', flag: '🇬🇦', currency: 'XAF' },
+    { prefix: ['065', '066'],        name: 'Orange Gabon',   correspondent: 'ORANGE_GAB', flag: '🇬🇦', currency: 'XAF' },
+    { prefix: ['060', '062'],        name: 'Moov Gabon',     correspondent: 'MOOV_GAB',   flag: '🇬🇦', currency: 'XAF' },
+    // Cameroun
+    { prefix: ['067', '068', '069'], name: 'MTN Cameroun',   correspondent: 'MTN_MOMO_CMR', flag: '🇨🇲', currency: 'XAF' },
+    { prefix: ['699', '655', '656'], name: 'Orange Cameroun',correspondent: 'ORANGE_CMR',   flag: '🇨🇲', currency: 'XAF' },
+  ];
+
+  function detectOperator(msisdn) {
+    const clean = msisdn.replace(/\s/g, '');
+    for (const op of OPERATORS) {
+      for (const prefix of op.prefix) {
+        if (clean.startsWith(prefix)) return op;
+      }
+    }
+    return null;
+  }
+
+  // ── Setup ─────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    // Enregistrer service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/pos-sw.js').catch(() => {});
+    }
+
+    // Vérifier clé dans URL (QR code)
+    const params  = new URLSearchParams(window.location.search);
+    const keyParam = params.get('key');
+    const lblParam = params.get('label');
+    if (keyParam && keyParam.startsWith('sk_pos_')) {
+      document.getElementById('setup-key').value = keyParam;
+      if (lblParam) document.getElementById('setup-key').placeholder = lblParam;
+      setupPOS();
+      return;
+    }
+
+    // Vérifier clé sauvegardée
+    const saved = localStorage.getItem('ndsgpos_key');
+    if (saved) {
+      posKey = saved;
+      posLabel = localStorage.getItem('ndsgpos_label') || 'Caisse';
+      merchantName = localStorage.getItem('ndsgpos_merchant') || '';
+      posScope = JSON.parse(localStorage.getItem('ndsgpos_scope') || '{"deposit":true,"payout":false}');
+      enterPOS();
+    }
+  });
+
+  async function setupPOS() {
+    const key = document.getElementById('setup-key').value.trim();
+    const err = document.getElementById('setup-error');
+    const btn = document.getElementById('setup-btn');
+
+    if (!key.startsWith('sk_pos_')) {
+      err.textContent = 'Clé invalide. Elle doit commencer par sk_pos_';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Vérification...';
+    err.textContent = '';
+
+    try {
+      // Tester la clé en faisant une requête de listing dépôts
+      const res  = await fetch(`${API}/deposits?limit=1`, {
+        headers: { 'Authorization': 'Bearer ' + key }
+      });
+      const data = await res.json();
+
+      if (!data.success && res.status === 401) {
+        err.textContent = 'Clé invalide ou révoquée.';
+        btn.disabled = false;
+        btn.textContent = 'Configurer';
+        return;
+      }
+
+      // Récupérer les infos du marchand
+      const merchantRes  = await fetch(`${API}/merchant/settings`, {
+        headers: { 'Authorization': 'Bearer ' + key }
+      });
+      const merchantData = await merchantRes.json();
+
+      posKey       = key;
+      posLabel     = new URLSearchParams(window.location.search).get('label') || 'Caisse POS';
+      merchantName = merchantData.success ? merchantData.merchant.name : '';
+      posScope     = {
+        deposit: true,  // les clés POS deposit-only peuvent lister les dépôts
+        payout:  merchantData.success ? (merchantData.merchant.scopePayout || false) : false
+      };
+
+      localStorage.setItem('ndsgpos_key',      posKey);
+      localStorage.setItem('ndsgpos_label',     posLabel);
+      localStorage.setItem('ndsgpos_merchant',  merchantName);
+      localStorage.setItem('ndsgpos_scope',     JSON.stringify(posScope));
+
+      enterPOS();
+    } catch (e) {
+      err.textContent = 'Erreur de connexion. Vérifiez votre réseau.';
+      btn.disabled = false;
+      btn.textContent = 'Configurer';
+    }
+  }
+
+  function enterPOS() {
+    document.getElementById('pos-label').textContent    = posLabel;
+    document.getElementById('pos-merchant').textContent = merchantName;
+
+    // Masquer l'onglet payout si pas autorisé
+    const payoutTab = document.getElementById('tab-payout');
+    if (!posScope.payout) {
+      payoutTab.style.display = 'none';
+    }
+
+    showScreen('pos');
+    resetPOS();
+  }
+
+  // ── Navigation ────────────────────────────────────────────────
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+  }
+
+  // ── Mode ──────────────────────────────────────────────────────
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('tab-collect').classList.toggle('active', mode === 'collect');
+    document.getElementById('tab-payout').classList.toggle('active', mode === 'payout');
+    document.getElementById('pos-btn').textContent = mode === 'collect' ? 'Encaisser' : 'Envoyer';
+    resetAmount();
+  }
+
+  // ── Numpad ────────────────────────────────────────────────────
+  function numpad(val) {
+    if (val === 'del') {
+      amountRaw = amountRaw.slice(0, -1);
+    } else if (val === '000') {
+      if (amountRaw.length > 0) amountRaw += '000';
+    } else {
+      if (amountRaw === '0') amountRaw = '';
+      if (amountRaw.length >= 9) return;
+      amountRaw += val;
+    }
+    updateAmountDisplay();
+  }
+
+  function resetAmount() {
+    amountRaw = '';
+    updateAmountDisplay();
+  }
+
+  function updateAmountDisplay() {
+    const val = parseInt(amountRaw || '0');
+    document.getElementById('amount-display').textContent = new Intl.NumberFormat('fr-FR').format(val);
+  }
+
+  // ── Numéro client ─────────────────────────────────────────────
+  function onMsisdnChange(val) {
+    const badge = document.getElementById('operator-badge');
+    const op = detectOperator(val);
+    if (op) {
+      badge.className = 'operator-badge detected';
+      badge.textContent = op.flag + ' ' + op.name;
+      document.getElementById('amount-currency').textContent = op.currency;
+    } else {
+      badge.className = 'operator-badge unknown';
+      badge.textContent = '— Opérateur inconnu';
+      document.getElementById('amount-currency').textContent = 'XAF';
+    }
+  }
+
+  // ── Transaction ───────────────────────────────────────────────
+  async function initiateTx() {
+    const amount = parseInt(amountRaw || '0');
+    const msisdn = document.getElementById('msisdn-input').value.replace(/\s/g, '');
+    const op     = detectOperator(msisdn);
+
+    if (!amount || amount < 100) { showToast('Montant minimum : 100'); return; }
+    if (!msisdn || msisdn.length < 9) { showToast('Numéro invalide'); return; }
+    if (!op) { showToast('Opérateur non reconnu'); return; }
+
+    const btn = document.getElementById('pos-btn');
+    btn.disabled = true;
+    btn.textContent = 'Envoi...';
+
+    try {
+      const endpoint = currentMode === 'collect' ? '/pay/deposits' : '/pay/payouts';
+      const res  = await fetch(API + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + posKey },
+        body: JSON.stringify({
+          amount,
+          currency:      op.currency,
+          correspondent: op.correspondent,
+          msisdn,
+          description:   (currentMode === 'collect' ? 'Encaissement' : 'Remboursement') + ' POS ' + posLabel
+        })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        currentTxId = currentMode === 'collect' ? data.depositId : data.payoutId;
+        showStatusScreen(amount, op, msisdn);
+        startPolling(currentMode, currentTxId);
+      } else {
+        showToast(data.error || 'Erreur');
+        btn.disabled = false;
+        btn.textContent = currentMode === 'collect' ? 'Encaisser' : 'Envoyer';
+      }
+    } catch (e) {
+      showToast('Erreur réseau');
+      btn.disabled = false;
+      btn.textContent = currentMode === 'collect' ? 'Encaisser' : 'Envoyer';
+    }
+  }
+
+  function showStatusScreen(amount, op, msisdn) {
+    const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
+    document.getElementById('status-amount').textContent    = fmt(amount) + ' ' + op.currency;
+    document.getElementById('detail-msisdn').textContent    = msisdn;
+    document.getElementById('detail-operator').textContent  = op.flag + ' ' + op.name;
+    document.getElementById('detail-ref').textContent       = currentTxId.substring(0, 16) + '...';
+    document.getElementById('status-detail').style.display  = 'block';
+    document.getElementById('status-icon').className        = 'status-icon pending';
+    document.getElementById('status-icon').textContent      = '⏳';
+    document.getElementById('status-title').textContent     = 'En attente du client';
+    document.getElementById('status-desc').textContent      = 'Le client va recevoir une demande sur son téléphone. Veuillez patienter...';
+    document.getElementById('status-new-btn').style.display  = 'none';
+    document.getElementById('status-cancel-btn').style.display = 'block';
+    document.getElementById('status-header-meta').textContent = 'En cours...';
+    showScreen('status');
+  }
+
+  // ── Polling statut ────────────────────────────────────────────
+  function startPolling(mode, txId) {
+    if (pollInterval) clearInterval(pollInterval);
+    let attempts = 0;
+    const maxAttempts = 40; // 2 minutes max (40 × 3s)
+
+    pollInterval = setInterval(async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(pollInterval);
+        setStatusFailed('Délai dépassé. La transaction a expiré.');
+        return;
+      }
+
+      try {
+        const endpoint = mode === 'collect' ? '/deposits/' : '/payouts/';
+        const res  = await fetch(API + endpoint + txId, {
+          headers: { 'Authorization': 'Bearer ' + posKey }
+        });
+        const data = await res.json();
+        if (!data.success) return;
+
+        const tx     = data.deposit || data.payout;
+        const status = tx?.status;
+
+        if (status === 'COMPLETED') {
+          clearInterval(pollInterval);
+          setStatusSuccess(mode);
+        } else if (status === 'FAILED' || status === 'DUPLICATE_IGNORED') {
+          clearInterval(pollInterval);
+          setStatusFailed('Transaction échouée. ' + (tx?.failureMessage || ''));
+        }
+        // INITIATED / SUBMITTED → on continue à poller
+      } catch (e) { /* réseau — on réessaie */ }
+    }, 3000);
+  }
+
+  function setStatusSuccess(mode) {
+    document.getElementById('status-icon').className    = 'status-icon success';
+    document.getElementById('status-icon').textContent  = '✅';
+    document.getElementById('status-title').textContent = mode === 'collect' ? 'Paiement reçu !' : 'Envoi effectué !';
+    document.getElementById('status-desc').textContent  = mode === 'collect'
+      ? 'Le paiement a été confirmé par le client.'
+      : 'Les fonds ont été envoyés au client.';
+    document.getElementById('status-header-meta').textContent = 'Succès';
+    document.getElementById('status-new-btn').style.display    = 'block';
+    document.getElementById('status-cancel-btn').style.display = 'none';
+  }
+
+  function setStatusFailed(msg) {
+    document.getElementById('status-icon').className    = 'status-icon failed';
+    document.getElementById('status-icon').textContent  = '❌';
+    document.getElementById('status-title').textContent = 'Transaction échouée';
+    document.getElementById('status-desc').textContent  = msg;
+    document.getElementById('status-header-meta').textContent = 'Échec';
+    document.getElementById('status-new-btn').style.display    = 'block';
+    document.getElementById('status-cancel-btn').style.display = 'none';
+  }
+
+  function newTransaction() {
+    if (pollInterval) clearInterval(pollInterval);
+    showScreen('pos');
+    resetPOS();
+  }
+
+  function cancelTransaction() {
+    if (pollInterval) clearInterval(pollInterval);
+    showScreen('pos');
+    resetPOS();
+  }
+
+  function resetPOS() {
+    resetAmount();
+    document.getElementById('msisdn-input').value = '';
+    document.getElementById('operator-badge').className   = 'operator-badge unknown';
+    document.getElementById('operator-badge').textContent = '— Opérateur inconnu';
+    document.getElementById('pos-btn').disabled    = false;
+    document.getElementById('pos-btn').textContent = currentMode === 'collect' ? 'Encaisser' : 'Envoyer';
+    document.getElementById('amount-currency').textContent = 'XAF';
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── Réinitialiser la caisse ───────────────────────────────────
+  function resetSetup() {
+    localStorage.removeItem('ndsgpos_key');
+    localStorage.removeItem('ndsgpos_label');
+    localStorage.removeItem('ndsgpos_merchant');
+    localStorage.removeItem('ndsgpos_scope');
+    posKey = '';
+    document.getElementById('setup-key').value = '';
+    document.getElementById('setup-error').textContent = '';
+    document.getElementById('setup-btn').disabled = false;
+    document.getElementById('setup-btn').textContent = 'Configurer';
+    showScreen('setup');
+  }
+</script>
+</body>
+</html>

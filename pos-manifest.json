@@ -1,0 +1,27 @@
+{
+  "name": "NDSGPay POS",
+  "short_name": "POS",
+  "description": "Terminal de paiement mobile money NDSGPay",
+  "start_url": "/pos.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://ndsgservices.com/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "https://ui-avatars.com/api/?name=POS&background=2563eb&color=fff&size=192&bold=true&format=png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://ui-avatars.com/api/?name=POS&background=2563eb&color=fff&size=512&bold=true&format=png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
