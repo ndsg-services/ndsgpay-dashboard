@@ -621,33 +621,25 @@
     err.textContent = '';
 
     try {
-      // Tester la clé en faisant une requête de listing dépôts
-      const res  = await fetch(`${API}/deposits?limit=1`, {
+      // Valider la clé POS via endpoint dédié
+      const res  = await fetch(`${API}/pos/validate`, {
         headers: { 'Authorization': 'Bearer ' + key }
       });
-      const data = await res.json();
 
-      if (!data.success && res.status === 401) {
+      if (res.status === 401 || res.status === 403) {
         err.textContent = 'Clé invalide ou révoquée.';
         btn.disabled = false;
         btn.textContent = 'Configurer';
         return;
       }
 
-      // Récupérer les infos du marchand
-      const merchantRes  = await fetch(`${API}/merchant/settings`, {
-        headers: { 'Authorization': 'Bearer ' + key }
-      });
-      const merchantData = await merchantRes.json();
-
+      const data   = await res.json();
+      const params = new URLSearchParams(window.location.search);
       posKey       = key;
-      posLabel     = new URLSearchParams(window.location.search).get('label') || 'Caisse POS';
-      merchantName = merchantData.success ? merchantData.merchant.name : '';
-      posKeyId     = merchantData.success ? (merchantData.posKeyId || '') : '';
-      posScope     = {
-        deposit: true,
-        payout:  merchantData.success ? (merchantData.merchant.scopePayout || false) : false
-      };
+      posLabel     = params.get('label') || data.label || 'Caisse POS';
+      merchantName = params.get('merchant') || '';
+      posKeyId     = params.get('keyid') || '';
+      posScope     = { deposit: true, payout: false };
 
       localStorage.setItem('ndsgpos_key',      posKey);
       localStorage.setItem('ndsgpos_label',     posLabel);
