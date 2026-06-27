@@ -432,9 +432,12 @@
       <button id="tab-collect" onclick="setMode('collect')" style="padding:5px 12px;border-radius:20px;border:none;font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer;background:var(--blue);color:#fff">📥 Encaisser</button>
       <button id="tab-payout" onclick="setMode('payout')" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer;background:transparent;color:var(--text-muted);display:none">📤 Monnaie</button>
     </div>
-    <div style="font-size:11px;color:var(--text-muted);text-align:right">
-      <strong id="pos-label" style="color:var(--text);display:block">—</strong>
-      <span id="pos-merchant">—</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:11px;color:var(--text-muted);text-align:right">
+        <strong id="pos-label" style="color:var(--text);display:block">—</strong>
+        <span id="pos-merchant">—</span>
+      </div>
+      <button onclick="confirmLogout()" style="background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text-muted);padding:4px 8px;font-size:11px;cursor:pointer;font-family:var(--sans)">⏏</button>
     </div>
   </div>
 
@@ -993,7 +996,9 @@
   }
 
   // ── Réinitialiser la caisse ───────────────────────────────────
-  function resetSetup() {
+  function confirmLogout() {
+    if (confirm('Déconnecter cette caisse ?')) resetSetup();
+  }
     localStorage.removeItem('ndsgpos_key');
     localStorage.removeItem('ndsgpos_label');
     localStorage.removeItem('ndsgpos_merchant');
