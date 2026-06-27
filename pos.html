@@ -567,7 +567,10 @@
   ];
 
   function detectOperator(msisdn) {
-    const clean = msisdn.replace(/\s/g, '');
+    let clean = msisdn.replace(/\s/g, '');
+    // Retirer le préfixe pays si présent (241 Gabon, 237 Cameroun)
+    if (clean.startsWith('241')) clean = '0' + clean.substring(3);
+    if (clean.startsWith('237')) clean = '0' + clean.substring(3);
     for (const op of OPERATORS) {
       for (const prefix of op.prefix) {
         if (clean.startsWith(prefix)) return op;
@@ -735,8 +738,15 @@
   // ── Transaction ───────────────────────────────────────────────
   async function initiateTx() {
     const amount = parseInt(amountRaw || '0');
-    const msisdn = document.getElementById('msisdn-input').value.replace(/\s/g, '');
-    const op     = detectOperator(msisdn);
+    const msisdnRaw = document.getElementById('msisdn-input').value.replace(/\s/g, '');
+    const op        = detectOperator(msisdnRaw);
+
+    // Ajouter le préfixe pays si absent
+    const msisdn = msisdnRaw.startsWith('241') || msisdnRaw.startsWith('237')
+      ? msisdnRaw
+      : (op?.currency === 'XAF' && msisdnRaw.startsWith('0')
+          ? (op?.correspondent?.includes('CMR') ? '237' : '241') + msisdnRaw.substring(1)
+          : '241' + msisdnRaw);
 
     if (!amount || amount < 100) { showToast('Montant minimum : 100'); return; }
     if (!msisdn || msisdn.length < 9) { showToast('Numéro invalide'); return; }
