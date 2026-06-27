@@ -650,8 +650,8 @@
       const params = new URLSearchParams(window.location.search);
       posKey       = key;
       posLabel     = params.get('label') || data.label || 'Caisse POS';
-      merchantName = params.get('merchant') || '';
-      posKeyId     = params.get('keyid') || '';
+      merchantName = params.get('merchant') || data.merchantName || '';
+      posKeyId     = params.get('keyid') || data.posKeyId || '';
       posScope     = { deposit: true, payout: false };
 
       localStorage.setItem('ndsgpos_key',      posKey);
