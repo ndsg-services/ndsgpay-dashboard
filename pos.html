@@ -773,7 +773,7 @@
           currency:      op.currency,
           correspondent: op.correspondent,
           msisdn,
-          description:   (currentMode === 'collect' ? 'Encaissement' : 'Remboursement') + ' POS ' + posLabel
+          description: currentMode === 'collect' ? 'Paiement NDSGPay' : 'Virement NDSGPay'
         })
       });
       const data = await res.json();
