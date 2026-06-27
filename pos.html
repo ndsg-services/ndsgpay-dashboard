@@ -999,6 +999,8 @@
   function confirmLogout() {
     if (confirm('Déconnecter cette caisse ?')) resetSetup();
   }
+
+  function resetSetup() {
     localStorage.removeItem('ndsgpos_key');
     localStorage.removeItem('ndsgpos_label');
     localStorage.removeItem('ndsgpos_merchant');
