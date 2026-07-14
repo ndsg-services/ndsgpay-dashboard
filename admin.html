@@ -651,7 +651,7 @@
 
     if (data.length === 0) { alert('Aucune transaction à exporter'); return; }
 
-    const headers = ['ID', 'Type', 'Marchand', 'Email', 'Opérateur', 'Numéro', 'Montant', 'Devise', 'Statut', 'Date'];
+    const headers = ['ID', 'Type', 'Marchand', 'Email', 'Opérateur', 'Numéro', 'Montant', 'Devise', 'Statut', 'Code erreur', 'Message erreur', 'Date'];
     const rows = data.map(tx => [
       tx.txId,
       tx.type === 'deposit' ? 'Dépôt' : 'Payout',
@@ -662,6 +662,8 @@
       tx.amount,
       tx.currency || 'XAF',
       tx.status,
+      tx.failureCode || '',
+      tx.failureMessage || '',
       new Date(tx.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
     ]);
 
@@ -681,7 +683,14 @@
       return;
     }
 
-    const rows = txs.map(tx => `
+    const rows = txs.map(tx => {
+      const statusBadge = tx.status === 'COMPLETED'
+        ? `<span class="badge active">${tx.status}</span>`
+        : tx.status === 'FAILED'
+          ? `<span class="badge" style="background:var(--danger-bg);color:var(--danger)">${tx.status}</span>
+             ${tx.failureCode ? `<div style="font-size:10px;color:var(--danger);margin-top:3px;font-family:monospace">${tx.failureCode}</div>` : ''}`
+          : `<span class="badge ${tx.status === 'INITIATED' ? '' : 'pending'}">${tx.status}</span>`;
+      return `
       <tr>
         <td class="td-mono">${tx.txId?.slice(0,8)}...</td>
         <td>${tx.type === 'deposit' ? '📥 Dépôt' : '📤 Payout'}</td>
@@ -689,10 +698,10 @@
         <td>${tx.correspondent}</td>
         <td class="td-muted">${tx.msisdn}</td>
         <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(tx.amount)} ${tx.currency || 'XAF'}</td>
-        <td><span class="badge ${tx.status === 'COMPLETED' ? 'active' : tx.status === 'INITIATED' ? '' : 'pending'}" style="${tx.status === 'FAILED' ? 'background:var(--danger-bg);color:var(--danger)' : ''}">${tx.status}</span></td>
+        <td>${statusBadge}</td>
         <td class="td-muted">${new Date(tx.createdAt).toLocaleDateString('fr-FR')} ${new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
 
     document.getElementById('tx-table-body').innerHTML = `
       <table>
