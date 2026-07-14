@@ -628,9 +628,62 @@
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 600px) {
-      .sidebar { display: none; }
+      .sidebar {
+        display: flex;
+        position: fixed;
+        left: -260px;
+        top: 0;
+        height: 100vh;
+        z-index: 1000;
+        transition: left .25s ease;
+        box-shadow: none;
+      }
+      .sidebar.open {
+        left: 0;
+        box-shadow: 4px 0 24px rgba(0,0,0,.15);
+      }
       .main { margin-left: 0; }
       .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .mobile-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--white);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .mobile-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.4);
+        z-index: 999;
+      }
+      .mobile-overlay.open { display: block; }
+      .hamburger-btn {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .hamburger-btn span {
+        display: block;
+        width: 18px;
+        height: 2px;
+        background: var(--text);
+        border-radius: 2px;
+      }
+    }
+    @media (min-width: 601px) {
+      .mobile-header { display: none; }
+      .mobile-overlay { display: none !important; }
     }
 
     /* ── ANIMATIONS ──────────────────────────────────────────── */
@@ -713,8 +766,20 @@
 <!-- ══════════════════════════════════════════════════════════ -->
 <div id="app">
 
+  <!-- Mobile overlay -->
+  <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+  <!-- Mobile header -->
+  <div class="mobile-header" id="mobile-header" style="display:none">
+    <button class="hamburger-btn" onclick="openMobileMenu()">
+      <span></span><span></span><span></span>
+    </button>
+    <div style="font-size:15px;font-weight:700;color:var(--text)">NDSG<span style="color:var(--blue)">Pay</span></div>
+    <div style="width:38px"></div>
+  </div>
+
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">NDSG<span>Pay</span></div>
       <div class="sidebar-logo-sub">Espace Marchand</div>
@@ -2473,6 +2538,31 @@
     btn.disabled = false;
     btn.textContent = 'Envoyer la demande';
   }
+
+  // ── MENU MOBILE ──────────────────────────────────────────────
+  function openMobileMenu() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('mobile-overlay').classList.add('open');
+  }
+  function closeMobileMenu() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('mobile-overlay').classList.remove('open');
+  }
+
+  // Afficher le header mobile si petit écran
+  function checkMobileHeader() {
+    const mh = document.getElementById('mobile-header');
+    if (mh) mh.style.display = window.innerWidth <= 600 ? 'flex' : 'none';
+  }
+  window.addEventListener('resize', checkMobileHeader);
+  checkMobileHeader();
+
+  // Fermer le menu mobile quand on clique sur un item nav
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (window.innerWidth <= 600) closeMobileMenu();
+    });
+  });
 
   // ── EXPORT CSV ───────────────────────────────────────────────
   async function exportCSV() {
