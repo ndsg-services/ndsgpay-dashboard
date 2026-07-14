@@ -1060,6 +1060,7 @@
               <span class="api-key-label">Clé secrète</span>
               <span class="api-key-val" id="sec-key">sk_live_••••••••••••••••••••••••••••••••••••••••••••••••••••••••••</span>
               <button class="copy-btn" onclick="revealKey()">Révéler</button>
+              <button class="copy-btn" onclick="copySecretKey()">Copier</button>
             </div>
             <div class="api-meta" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
               <div style="display:flex;gap:16px">
@@ -2320,6 +2321,15 @@
       btn.textContent = 'Copié ✓';
       btn.classList.add('copied');
       setTimeout(() => { btn.textContent = 'Copier'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  function copySecretKey() {
+    const el = document.getElementById('sec-key');
+    if (!el || !el._full) return;
+    navigator.clipboard.writeText(el._full).then(() => {
+      const btns = document.querySelectorAll('.copy-btn');
+      btns.forEach(b => { if (b.textContent === 'Copier') { b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 2000); } });
     });
   }
 
