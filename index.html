@@ -798,7 +798,7 @@
       </button>
       <button class="nav-item" onclick="showPanel('withdrawals')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><polyline points="8 18 4 22 8 26"/></svg>
-        <span data-i18n="nav-withdrawals">Virements</span>
+        <span data-i18n="nav-withdrawals">Banque</span>
         <span class="nav-badge" id="withdrawal-badge" style="display:none;background:var(--warning)">!</span>
       </button>
       <button class="nav-item" onclick="showPanel('analytics')">
@@ -1382,7 +1382,7 @@
     fr: {
       overview:     "Vue d'<em>ensemble</em>",
       transactions: "Transactions",
-      withdrawals:  "Virements",
+      withdrawals:  "Banque",
       analytics:    "Analytics",
       apikeys:      "Clés <em>API</em>",
       docs:         "Documentation",
@@ -1393,7 +1393,7 @@
     en: {
       overview:     "<em>Overview</em>",
       transactions: "Transactions",
-      withdrawals:  "Payouts",
+      withdrawals:  "Bank",
       analytics:    "Analytics",
       apikeys:      "<em>API</em> Keys",
       docs:         "Documentation",
@@ -1579,7 +1579,7 @@
     "nav-sec-account": "Compte",
     "nav-overview": "Vue d'ensemble",
     "nav-transactions": "Transactions",
-    "nav-withdrawals": "Virements",
+    "nav-withdrawals": "Banque",
     "nav-analytics": "Analytics",
     "nav-apikeys": "Clés API",
     "nav-docs": "Documentation",
@@ -1629,7 +1629,7 @@
     "col-date": "Date",
     "title-overview": "Vue d'ensemble",
     "title-transactions": "Transactions",
-    "title-withdrawals": "Virements",
+    "title-withdrawals": "Banque",
     "title-analytics": "Analytics",
     "title-apikeys": "Clés API",
     "title-docs": "Documentation",
@@ -1641,7 +1641,7 @@
     "nav-sec-account": "Account",
     "nav-overview": "Overview",
     "nav-transactions": "Transactions",
-    "nav-withdrawals": "Payouts",
+    "nav-withdrawals": "Bank",
     "nav-analytics": "Analytics",
     "nav-apikeys": "API Keys",
     "nav-docs": "Documentation",
@@ -1691,7 +1691,7 @@
     "col-date": "Date",
     "title-overview": "Overview",
     "title-transactions": "Transactions",
-    "title-withdrawals": "Payouts",
+    "title-withdrawals": "Bank",
     "title-analytics": "Analytics",
     "title-apikeys": "API Keys",
     "title-docs": "Documentation",
@@ -2028,7 +2028,7 @@
       dep:      lang === 'en' ? 'Collection'             : 'Collecté',
       pay:      lang === 'en' ? 'Payout'                 : 'Payout',
       fees:     lang === 'en' ? 'Fees'                   : 'Frais',
-      wd:       lang === 'en' ? 'Withdrawals'            : 'Virements',
+      wd:       lang === 'en' ? 'Withdrawals'            : 'Banque',
       bal:      lang === 'en' ? 'Available balance'      : 'Solde disponible',
     };
     currencyBlock.innerHTML = `
