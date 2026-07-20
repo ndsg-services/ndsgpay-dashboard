@@ -799,6 +799,10 @@
       <button class="nav-item" onclick="showPanel('withdrawals')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><polyline points="8 18 4 22 8 26"/></svg>
         <span data-i18n="nav-withdrawals">Banque</span>
+      </button>
+      <button class="nav-item" onclick="showPanel('retrait')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        <span data-i18n="nav-retrait">Retrait</span>
         <span class="nav-badge" id="withdrawal-badge" style="display:none;background:var(--warning)">!</span>
       </button>
       <button class="nav-item" onclick="showPanel('analytics')">
@@ -1133,6 +1137,81 @@
       </div>
       </div>
 
+      <!-- ── RETRAIT ── -->
+      <div class="panel" id="panel-retrait">
+        <div class="panel-header">
+          <div class="panel-title" data-i18n="title-retrait">Retrait mobile money</div>
+        </div>
+
+        <!-- Solde disponible -->
+        <div class="card" style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="kpi-label" data-i18n="retrait-solde">Solde disponible</div>
+              <div style="font-size:28px;font-weight:700;margin-top:4px" id="retrait-balance">—</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px" data-i18n="retrait-solde-sub">Collecté – Frais – Payouts</div>
+            </div>
+            <span class="badge active" id="retrait-balance-badge">XAF</span>
+          </div>
+        </div>
+
+        <!-- Formulaire retrait -->
+        <div class="card" style="margin-bottom:20px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:16px" data-i18n="retrait-form-title">Initier un retrait</div>
+
+          <!-- Opérateur -->
+          <div class="field-group" style="margin-bottom:14px">
+            <label class="field-label" data-i18n="retrait-operator">Opérateur</label>
+            <select id="retrait-correspondent" onchange="onRetraitCorrChange()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);outline:none">
+              <option value="">— Choisir un opérateur</option>
+              <option value="AIRTEL_GAB">🇬🇦 AIRTEL_GAB — Airtel Money Gabon</option>
+              <option value="MTN_MOMO_CMR">🇨🇲 MTN_MOMO_CMR — MTN Mobile Money Cameroun</option>
+              <option value="ORANGE_CMR">🇨🇲 ORANGE_CMR — Orange Money Cameroun</option>
+            </select>
+          </div>
+
+          <!-- Numéro -->
+          <div class="field-group" style="margin-bottom:14px">
+            <label class="field-label" data-i18n="retrait-msisdn">Numéro mobile</label>
+            <input type="tel" id="retrait-msisdn" placeholder="24174709401"
+              style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;background:var(--white);color:var(--text);outline:none;box-sizing:border-box"/>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px" data-i18n="retrait-msisdn-hint">Préfixe pays sans 0 (ex: 24174XXXXXX)</div>
+          </div>
+
+          <!-- Montant -->
+          <div class="field-group" style="margin-bottom:14px">
+            <label class="field-label" data-i18n="retrait-amount">Montant (XAF)</label>
+            <input type="number" id="retrait-amount" placeholder="5000" min="100"
+              style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);outline:none;box-sizing:border-box"/>
+            <div style="display:flex;justify-content:space-between;margin-top:4px">
+              <span style="font-size:11px;color:var(--text-muted)" id="retrait-limits">Min : 100 XAF</span>
+              <span style="font-size:11px;color:var(--blue);cursor:pointer" onclick="retraitToutRetirer()" data-i18n="retrait-all">Tout retirer</span>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="field-group" style="margin-bottom:20px">
+            <label class="field-label" data-i18n="retrait-desc">Description <span style="color:var(--text-muted);font-weight:400">(max 22 caractères)</span></label>
+            <input type="text" id="retrait-description" placeholder="Retrait marchand" maxlength="22"
+              style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);outline:none;box-sizing:border-box"/>
+          </div>
+
+          <button class="btn-primary" onclick="submitRetrait()" id="retrait-btn" style="width:100%">
+            Initier le retrait
+          </button>
+          <div id="retrait-error" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
+        </div>
+
+        <!-- Historique retraits -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-size:14px;font-weight:600" data-i18n="retrait-history">Historique des retraits</div>
+            <button class="btn-sm" onclick="exportRetraitCSV()">⬇ CSV</button>
+          </div>
+          <div id="retrait-history-list"><div style="color:var(--text-muted);font-size:13px">Chargement...</div></div>
+        </div>
+      </div>
+
       <!-- ── DOCS ── -->
       <div class="panel" id="panel-docs">
 
@@ -1406,6 +1485,7 @@
     overview:     { id: 'panel-overview'     },
     transactions: { id: 'panel-transactions' },
     withdrawals:  { id: 'panel-withdrawals'  },
+    retrait:      { id: 'panel-retrait'      },
     analytics:    { id: 'panel-analytics'    },
     apikeys:      { id: 'panel-apikeys'      },
     docs:         { id: 'panel-docs'         },
@@ -1430,6 +1510,7 @@
     if (name === 'overview' || name === 'analytics') loadStats();
     if (name === 'transactions') loadTransactions();
     if (name === 'withdrawals') loadWithdrawals();
+    if (name === 'retrait') loadRetraitPanel();
     if (name === 'team') loadTeam();
     if (name === 'poskeys') loadPosKeys();
   }
@@ -1580,6 +1661,7 @@
     "nav-overview": "Vue d'ensemble",
     "nav-transactions": "Transactions",
     "nav-withdrawals": "Banque",
+        "nav-retrait": "Retrait",
     "nav-analytics": "Analytics",
     "nav-apikeys": "Clés API",
     "nav-docs": "Documentation",
@@ -1642,6 +1724,7 @@
     "nav-overview": "Overview",
     "nav-transactions": "Transactions",
     "nav-withdrawals": "Bank",
+        "nav-retrait": "Withdrawal",
     "nav-analytics": "Analytics",
     "nav-apikeys": "API Keys",
     "nav-docs": "Documentation",
@@ -2573,6 +2656,147 @@
       if (window.innerWidth <= 600) closeMobileMenu();
     });
   });
+
+  // ── RETRAIT ──────────────────────────────────────────────────
+  let retraitLimits = {};
+  let retraitBalance = 0;
+  let retraitWithdrawals = [];
+
+  async function loadRetraitPanel() {
+    // Charger le solde
+    try {
+      const r = await authFetch('/stats');
+      const d = await r.json();
+      if (d.success) {
+        retraitBalance = d.stats?.availableBalance || 0;
+        const fmt = new Intl.NumberFormat('fr-FR').format(Math.round(retraitBalance));
+        document.getElementById('retrait-balance').textContent = fmt + ' XAF';
+      }
+    } catch (e) {}
+
+    // Charger les limites PawaPay
+    try {
+      const r = await authFetch('/merchant/correspondent-limits');
+      const d = await r.json();
+      if (d.success) retraitLimits = d.limits || {};
+    } catch (e) {}
+
+    // Charger l'historique
+    await loadRetraitHistory();
+  }
+
+  async function loadRetraitHistory() {
+    try {
+      const r = await authFetch('/merchant/withdrawals');
+      const d = await r.json();
+      if (!d.success) return;
+      retraitWithdrawals = d.withdrawals || [];
+      renderRetraitHistory(retraitWithdrawals);
+    } catch (e) {}
+  }
+
+  function renderRetraitHistory(list) {
+    const el = document.getElementById('retrait-history-list');
+    if (!list.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0">Aucun retrait effectué</div>';
+      return;
+    }
+    const fmt = n => new Intl.NumberFormat('fr-FR').format(Math.round(n));
+    el.innerHTML = list.map(w => {
+      const sColor = w.status === 'COMPLETED' ? 'var(--success)' : w.status === 'FAILED' ? 'var(--danger)' : 'var(--warning)';
+      const date = new Date(w.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(w.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:500">${w.correspondent} — <span style="font-family:monospace">${w.msisdn}</span></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${date}${w.failureCode ? ' · <span style="color:var(--danger)">' + w.failureCode + '</span>' : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:600">${fmt(w.amount)} ${w.currency}</div>
+          <div style="font-size:11px;color:${sColor};font-weight:500">${w.status}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function onRetraitCorrChange() {
+    const corr = document.getElementById('retrait-correspondent').value;
+    const limEl = document.getElementById('retrait-limits');
+    if (corr && retraitLimits[corr]?.payout) {
+      const { min, max } = retraitLimits[corr].payout;
+      const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
+      limEl.textContent = `Min : ${fmt(min)} XAF — Max : ${fmt(max)} XAF`;
+      document.getElementById('retrait-amount').min = min;
+      document.getElementById('retrait-amount').max = max;
+    } else {
+      limEl.textContent = 'Min : 100 XAF';
+    }
+  }
+
+  function retraitToutRetirer() {
+    if (retraitBalance > 0) {
+      document.getElementById('retrait-amount').value = Math.floor(retraitBalance);
+    }
+  }
+
+  async function submitRetrait() {
+    const btn = document.getElementById('retrait-btn');
+    const errEl = document.getElementById('retrait-error');
+    const correspondent = document.getElementById('retrait-correspondent').value;
+    const msisdn = document.getElementById('retrait-msisdn').value.trim();
+    const amount = document.getElementById('retrait-amount').value;
+    const description = document.getElementById('retrait-description').value || 'Retrait NDSGPay';
+
+    errEl.style.display = 'none';
+
+    if (!correspondent) { errEl.textContent = 'Choisissez un opérateur.'; errEl.style.display = 'block'; return; }
+    if (!msisdn) { errEl.textContent = 'Numéro mobile requis.'; errEl.style.display = 'block'; return; }
+    if (!amount || parseFloat(amount) < 100) { errEl.textContent = 'Montant minimum : 100 XAF.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Envoi...';
+
+    try {
+      const r = await authFetch('/merchant/withdrawal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, currency: 'XAF', correspondent, msisdn, description })
+      });
+      const d = await r.json();
+      if (d.success) {
+        btn.textContent = 'Retrait initié ✓';
+        document.getElementById('retrait-msisdn').value = '';
+        document.getElementById('retrait-amount').value = '';
+        setTimeout(() => { btn.disabled = false; btn.textContent = 'Initier le retrait'; }, 3000);
+        await loadRetraitHistory();
+      } else {
+        errEl.textContent = d.error || 'Erreur lors du retrait.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Initier le retrait';
+      }
+    } catch (e) {
+      errEl.textContent = 'Erreur réseau.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Initier le retrait';
+    }
+  }
+
+  function exportRetraitCSV() {
+    if (!retraitWithdrawals.length) { alert('Aucune donnée à exporter'); return; }
+    const headers = ['ID', 'Opérateur', 'Numéro', 'Montant', 'Devise', 'Statut', 'Code erreur', 'Date'];
+    const rows = retraitWithdrawals.map(w => [
+      w.payoutId, w.correspondent, w.msisdn, w.amount, w.currency, w.status,
+      w.failureCode || '',
+      new Date(w.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(w.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ndsgpay-retraits.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // ── EXPORT CSV ───────────────────────────────────────────────
   async function exportCSV() {
