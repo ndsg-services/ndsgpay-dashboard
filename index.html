@@ -2674,41 +2674,68 @@
   let retraitWithdrawals = [];
 
   async function loadRetraitPanel() {
-    // Charger les soldes par correspondant
+    // Réutiliser les données de stats déjà chargées
     try {
-      const r = await fetch(API + '/merchant/balances', {
-        headers: { 'Authorization': 'Bearer ' + jwtToken }
+      const res = await fetch(`${API}/stats`, {
+        headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
-      const d = await r.json();
-      if (d.success && d.balances) {
-        // Afficher le solde total XAF
-        const xafBalance = d.balances.find(b => b.currency === 'XAF');
-        retraitBalance = xafBalance?.availableBalance || 0;
-        const fmt = new Intl.NumberFormat('fr-FR').format(Math.round(retraitBalance));
-        document.getElementById('retrait-balance').textContent = fmt + ' XAF';
+      const data = await res.json();
+      if (data.success) {
+        const s = data.stats;
+        const currencies = s.currencies || ['XAF'];
+        const bbc = s.balancesByCurrency || {};
 
-        // Afficher les soldes par correspondant
-        const corrBalEl = document.getElementById('retrait-corr-balances');
-        if (corrBalEl && d.balances.length > 0) {
-          corrBalEl.innerHTML = d.balances.map(b => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-              <span style="font-size:12px;color:var(--text-muted);font-family:monospace">${b.correspondent || b.currency}</span>
-              <span style="font-size:13px;font-weight:600;color:var(--success)">${new Intl.NumberFormat('fr-FR').format(Math.round(b.availableBalance))} ${b.currency}</span>
-            </div>`).join('');
+        // Solde total
+        const balEl = document.getElementById('retrait-balance');
+        if (balEl) {
+          if (currencies.length > 1) {
+            balEl.innerHTML = currencies.map(cur => {
+              const b = bbc[cur]; if (!b) return '';
+              return `<div style="font-size:20px;line-height:1.5">${new Intl.NumberFormat('fr-FR').format(Math.round(b.availableBalance))} <span style="font-size:11px;color:var(--text-muted)">${cur}</span></div>`;
+            }).join('');
+          } else {
+            const b = bbc[currencies[0]];
+            retraitBalance = b?.availableBalance || 0;
+            balEl.textContent = formatAmount(retraitBalance, currencies[0]);
+          }
+        }
+
+        // Soldes par correspondant
+        const corrEl = document.getElementById('retrait-corr-balances');
+        if (corrEl && s.balancesByCorrespondent && s.correspondents?.length) {
+          corrEl.innerHTML = `<table style="width:100%">
+            <thead><tr>
+              <th style="text-align:left;font-size:11px;color:var(--text-muted);padding:8px 20px;font-weight:500">Pays</th>
+              <th style="text-align:left;font-size:11px;color:var(--text-muted);padding:8px 0;font-weight:500">Opérateur</th>
+              <th style="text-align:right;font-size:11px;color:var(--text-muted);padding:8px 20px;font-weight:500">Solde disponible</th>
+            </tr></thead>
+            <tbody>
+              ${s.correspondents.map(corr => {
+                const b = s.balancesByCorrespondent[corr]; if (!b) return '';
+                return `<tr>
+                  <td style="padding:10px 20px;font-size:13px">${b.flag} ${b.country}</td>
+                  <td style="padding:10px 0;font-size:11px;font-family:monospace;color:var(--text-muted)">${b.correspondent}</td>
+                  <td style="padding:10px 20px;font-size:13px;font-weight:600;color:var(--success);text-align:right">${formatAmount(b.availableBalance, b.currency)}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>`;
+        } else if (corrEl) {
+          corrEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px 20px">Aucune donnée de solde</div>';
         }
       }
-    } catch (e) { console.error('Retrait balance error:', e); }
+    } catch (e) { console.error('Retrait stats error:', e); }
 
-    // Charger les limites PawaPay (cache 30j)
+    // Limites PawaPay
     try {
       const r = await fetch(API + '/merchant/correspondent-limits', {
-        headers: { 'Authorization': 'Bearer ' + jwtToken }
+        headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const d = await r.json();
       if (d.success) retraitLimits = d.limits || {};
     } catch (e) { console.error('Limits error:', e); }
 
-    // Charger l'historique
+    // Historique
     await loadRetraitHistory();
   }
 
@@ -2727,24 +2754,24 @@
   function renderRetraitHistory(list) {
     const el = document.getElementById('retrait-history-list');
     if (!list.length) {
-      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0">Aucun retrait effectué</div>';
+      el.innerHTML = '<div class="empty-state"><div class="empty-title">Aucun retrait</div><div class="empty-desc">Initiez votre premier retrait depuis le formulaire.</div></div>';
       return;
     }
     const fmt = n => new Intl.NumberFormat('fr-FR').format(Math.round(n));
-    el.innerHTML = list.map(w => {
-      const sColor = w.status === 'COMPLETED' ? 'var(--success)' : w.status === 'FAILED' ? 'var(--danger)' : 'var(--warning)';
+    const rows = list.map(w => {
       const date = new Date(w.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(w.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:13px;font-weight:500">${w.correspondent} — <span style="font-family:monospace">${w.msisdn}</span></div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${date}${w.failureCode ? ' · <span style="color:var(--danger)">' + w.failureCode + '</span>' : ''}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:13px;font-weight:600">${fmt(w.amount)} ${w.currency}</div>
-          <div style="font-size:11px;color:${sColor};font-weight:500">${w.status}</div>
-        </div>
-      </div>`;
+      const badgeCls = w.status === 'COMPLETED' ? 'active' : '';
+      const badgeStyle = w.status === 'FAILED' ? 'background:var(--danger-bg);color:var(--danger)' : '';
+      const fc = w.failureCode ? '<br/><span style="font-size:10px">' + w.failureCode + '</span>' : '';
+      return '<tr>' +
+        '<td class="td-mono" style="font-size:11px">' + w.correspondent + '</td>' +
+        '<td class="td-mono">' + w.msisdn + '</td>' +
+        '<td style="font-weight:600">' + fmt(w.amount) + ' ' + w.currency + '</td>' +
+        '<td><span class="badge ' + badgeCls + '" style="' + badgeStyle + '">' + w.status + fc + '</span></td>' +
+        '<td class="td-muted">' + date + '</td>' +
+      '</tr>';
     }).join('');
+    el.innerHTML = '<table><thead><tr><th>Opérateur</th><th>Numéro</th><th>Montant</th><th>Statut</th><th>Date</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function onRetraitCorrChange() {
