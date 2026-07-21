@@ -1139,76 +1139,77 @@
 
       <!-- ── RETRAIT ── -->
       <div class="panel" id="panel-retrait">
-        <div class="panel-header">
-          <div class="panel-title" data-i18n="title-retrait">Retrait mobile money</div>
+
+        <!-- KPI solde -->
+        <div class="kpi-grid" style="margin-bottom:20px">
+          <div class="kpi">
+            <div class="kpi-label">Solde disponible</div>
+            <div class="kpi-value" id="retrait-balance">—</div>
+            <div class="kpi-note">Collecté – Frais – Payouts</div>
+          </div>
         </div>
 
-        <!-- Solde disponible -->
-        <div class="card" style="margin-bottom:20px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div class="kpi-label" data-i18n="retrait-solde">Solde disponible</div>
-              <div style="font-size:28px;font-weight:700;margin-top:4px" id="retrait-balance">—</div>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px" data-i18n="retrait-solde-sub">Collecté – Frais – Payouts</div>
+        <!-- Formulaire + historique côte à côte sur desktop -->
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start">
+
+          <!-- Formulaire retrait -->
+          <div class="table-card">
+            <div class="table-header">
+              <div class="table-title">Initier un retrait</div>
             </div>
-            <span class="badge active" id="retrait-balance-badge">XAF</span>
-          </div>
-        </div>
+            <div style="padding:16px 20px">
 
-        <!-- Formulaire retrait -->
-        <div class="card" style="margin-bottom:20px">
-          <div style="font-size:14px;font-weight:600;margin-bottom:16px" data-i18n="retrait-form-title">Initier un retrait</div>
+              <div style="margin-bottom:14px">
+                <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Opérateur</div>
+                <select id="retrait-correspondent" onchange="onRetraitCorrChange()" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);border:1px solid var(--border);outline:none">
+                  <option value="">— Choisir</option>
+                  <option value="AIRTEL_GAB">🇬🇦 Airtel Money Gabon</option>
+                  <option value="MTN_MOMO_CMR">🇨🇲 MTN Mobile Money CMR</option>
+                  <option value="ORANGE_CMR">🇨🇲 Orange Money CMR</option>
+                </select>
+              </div>
 
-          <!-- Opérateur -->
-          <div class="field-group" style="margin-bottom:14px">
-            <label class="field-label" data-i18n="retrait-operator">Opérateur</label>
-            <select id="retrait-correspondent" onchange="onRetraitCorrChange()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);outline:none">
-              <option value="">— Choisir un opérateur</option>
-              <option value="AIRTEL_GAB">🇬🇦 AIRTEL_GAB — Airtel Money Gabon</option>
-              <option value="MTN_MOMO_CMR">🇨🇲 MTN_MOMO_CMR — MTN Mobile Money Cameroun</option>
-              <option value="ORANGE_CMR">🇨🇲 ORANGE_CMR — Orange Money Cameroun</option>
-            </select>
-          </div>
+              <div style="margin-bottom:14px">
+                <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Numéro mobile</div>
+                <input type="tel" id="retrait-msisdn" placeholder="24174709401" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:monospace;background:var(--white);color:var(--text);border:1px solid var(--border);outline:none;box-sizing:border-box"/>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Préfixe pays sans 0 (ex: 24174XXXXXX)</div>
+              </div>
 
-          <!-- Numéro -->
-          <div class="field-group" style="margin-bottom:14px">
-            <label class="field-label" data-i18n="retrait-msisdn">Numéro mobile</label>
-            <input type="tel" id="retrait-msisdn" placeholder="24174709401"
-              style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;background:var(--white);color:var(--text);outline:none;box-sizing:border-box"/>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px" data-i18n="retrait-msisdn-hint">Préfixe pays sans 0 (ex: 24174XXXXXX)</div>
-          </div>
+              <div style="margin-bottom:14px">
+                <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Montant (XAF)</div>
+                <input type="number" id="retrait-amount" placeholder="5000" min="100" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);border:1px solid var(--border);outline:none;box-sizing:border-box"/>
+                <div style="display:flex;justify-content:space-between;margin-top:3px">
+                  <span style="font-size:11px;color:var(--text-muted)" id="retrait-limits">Min : 100 XAF</span>
+                  <span style="font-size:11px;color:var(--blue);cursor:pointer" onclick="retraitToutRetirer()">Tout retirer</span>
+                </div>
+              </div>
 
-          <!-- Montant -->
-          <div class="field-group" style="margin-bottom:14px">
-            <label class="field-label" data-i18n="retrait-amount">Montant (XAF)</label>
-            <input type="number" id="retrait-amount" placeholder="5000" min="100"
-              style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);outline:none;box-sizing:border-box"/>
-            <div style="display:flex;justify-content:space-between;margin-top:4px">
-              <span style="font-size:11px;color:var(--text-muted)" id="retrait-limits">Min : 100 XAF</span>
-              <span style="font-size:11px;color:var(--blue);cursor:pointer" onclick="retraitToutRetirer()" data-i18n="retrait-all">Tout retirer</span>
+              <div style="margin-bottom:20px">
+                <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Description <span style="font-weight:400;text-transform:none">(max 22 car.)</span></div>
+                <input type="text" id="retrait-description" placeholder="Retrait marchand" maxlength="22" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);border:1px solid var(--border);outline:none;box-sizing:border-box"/>
+              </div>
+
+              <button class="btn-sm primary" onclick="submitRetrait()" id="retrait-btn" style="width:100%;padding:10px;font-size:13px">
+                Initier le retrait
+              </button>
+              <div id="retrait-error" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
             </div>
           </div>
 
-          <!-- Description -->
-          <div class="field-group" style="margin-bottom:20px">
-            <label class="field-label" data-i18n="retrait-desc">Description <span style="color:var(--text-muted);font-weight:400">(max 22 caractères)</span></label>
-            <input type="text" id="retrait-description" placeholder="Retrait marchand" maxlength="22"
-              style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);outline:none;box-sizing:border-box"/>
+          <!-- Historique retraits -->
+          <div class="table-card">
+            <div class="table-header">
+              <div class="table-title">Historique des retraits</div>
+              <button class="btn-sm" onclick="exportRetraitCSV()">⬇ CSV</button>
+            </div>
+            <div id="retrait-history-list" style="padding:0 0 8px">
+              <div class="empty-state">
+                <div class="empty-title">Aucun retrait</div>
+                <div class="empty-desc">Initiez votre premier retrait depuis le formulaire.</div>
+              </div>
+            </div>
           </div>
 
-          <button class="btn-primary" onclick="submitRetrait()" id="retrait-btn" style="width:100%">
-            Initier le retrait
-          </button>
-          <div id="retrait-error" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
-        </div>
-
-        <!-- Historique retraits -->
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div style="font-size:14px;font-weight:600" data-i18n="retrait-history">Historique des retraits</div>
-            <button class="btn-sm" onclick="exportRetraitCSV()">⬇ CSV</button>
-          </div>
-          <div id="retrait-history-list"><div style="color:var(--text-muted);font-size:13px">Chargement...</div></div>
         </div>
       </div>
 
