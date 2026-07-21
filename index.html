@@ -2734,7 +2734,11 @@
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const d = await r.json();
-      if (d.success) retraitLimits = d.limits || {};
+      if (d.success) {
+        retraitLimits = d.limits || {};
+        // Mettre à jour l'affichage des limites si un opérateur est déjà sélectionné
+        onRetraitCorrChange();
+      }
     } catch (e) { console.error('Limits error:', e); }
 
     // Historique
