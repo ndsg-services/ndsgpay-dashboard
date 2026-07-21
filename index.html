@@ -1149,6 +1149,16 @@
           </div>
         </div>
 
+        <!-- Soldes par correspondant -->
+        <div class="table-card" style="margin-bottom:20px">
+          <div class="table-header">
+            <div class="table-title">Soldes par opérateur</div>
+          </div>
+          <div id="retrait-corr-balances" style="padding:0 20px 8px">
+            <div style="color:var(--text-muted);font-size:13px;padding:16px 0">Chargement...</div>
+          </div>
+        </div>
+
         <!-- Formulaire + historique côte à côte sur desktop -->
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start">
 
@@ -2664,23 +2674,39 @@
   let retraitWithdrawals = [];
 
   async function loadRetraitPanel() {
-    // Charger le solde
+    // Charger les soldes par correspondant
     try {
-      const r = await authFetch('/stats');
+      const r = await fetch(API + '/merchant/balances', {
+        headers: { 'Authorization': 'Bearer ' + jwtToken }
+      });
       const d = await r.json();
-      if (d.success) {
-        retraitBalance = d.stats?.availableBalance || 0;
+      if (d.success && d.balances) {
+        // Afficher le solde total XAF
+        const xafBalance = d.balances.find(b => b.currency === 'XAF');
+        retraitBalance = xafBalance?.availableBalance || 0;
         const fmt = new Intl.NumberFormat('fr-FR').format(Math.round(retraitBalance));
         document.getElementById('retrait-balance').textContent = fmt + ' XAF';
-      }
-    } catch (e) {}
 
-    // Charger les limites PawaPay
+        // Afficher les soldes par correspondant
+        const corrBalEl = document.getElementById('retrait-corr-balances');
+        if (corrBalEl && d.balances.length > 0) {
+          corrBalEl.innerHTML = d.balances.map(b => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:12px;color:var(--text-muted);font-family:monospace">${b.correspondent || b.currency}</span>
+              <span style="font-size:13px;font-weight:600;color:var(--success)">${new Intl.NumberFormat('fr-FR').format(Math.round(b.availableBalance))} ${b.currency}</span>
+            </div>`).join('');
+        }
+      }
+    } catch (e) { console.error('Retrait balance error:', e); }
+
+    // Charger les limites PawaPay (cache 30j)
     try {
-      const r = await authFetch('/merchant/correspondent-limits');
+      const r = await fetch(API + '/merchant/correspondent-limits', {
+        headers: { 'Authorization': 'Bearer ' + jwtToken }
+      });
       const d = await r.json();
       if (d.success) retraitLimits = d.limits || {};
-    } catch (e) {}
+    } catch (e) { console.error('Limits error:', e); }
 
     // Charger l'historique
     await loadRetraitHistory();
@@ -2688,12 +2714,14 @@
 
   async function loadRetraitHistory() {
     try {
-      const r = await authFetch('/merchant/withdrawals');
+      const r = await fetch(API + '/merchant/withdrawals', {
+        headers: { 'Authorization': 'Bearer ' + jwtToken }
+      });
       const d = await r.json();
       if (!d.success) return;
       retraitWithdrawals = d.withdrawals || [];
       renderRetraitHistory(retraitWithdrawals);
-    } catch (e) {}
+    } catch (e) { console.error('Withdrawals error:', e); }
   }
 
   function renderRetraitHistory(list) {
@@ -2757,9 +2785,9 @@
     btn.textContent = 'Envoi...';
 
     try {
-      const r = await authFetch('/merchant/withdrawal', {
+      const r = await fetch(API + '/merchant/withdrawal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwtToken },
         body: JSON.stringify({ amount, currency: 'XAF', correspondent, msisdn, description })
       });
       const d = await r.json();
