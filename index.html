@@ -2829,7 +2829,8 @@
         document.getElementById('retrait-msisdn').value = '';
         document.getElementById('retrait-amount').value = '';
         setTimeout(() => { btn.disabled = false; btn.textContent = 'Initier le retrait'; }, 3000);
-        await loadRetraitHistory();
+        // Recharger le panel pour mettre à jour les soldes
+        await loadRetraitPanel();
       } else {
         errEl.textContent = d.error || 'Erreur lors du retrait.';
         errEl.style.display = 'block';
