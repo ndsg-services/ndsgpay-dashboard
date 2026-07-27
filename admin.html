@@ -699,7 +699,7 @@
         <td class="td-muted">${tx.msisdn}</td>
         <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(tx.amount)} ${tx.currency || 'XAF'}</td>
         <td>${statusBadge}</td>
-        <td class="td-muted">${new Date(tx.createdAt).toLocaleDateString('fr-FR')} ${new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</td>
+        <td class="td-muted" style="white-space:nowrap">${new Date(tx.createdAt).toLocaleDateString('fr-FR')} ${new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</td>
       </tr>`;
     }).join('');
 
