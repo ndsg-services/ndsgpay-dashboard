@@ -1423,6 +1423,17 @@
             <button class="btn-sm primary" id="btn-save-settings" onclick="saveSettings()">Sauvegarder</button>
             <span id="settings-msg" style="font-size:12px;display:none"></span>
           </div>
+
+          <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Secret de signature webhook</div>
+            <div class="api-key-row">
+              <span class="api-key-label">Webhook secret</span>
+              <span class="api-key-val" id="webhook-secret-display" style="font-family:monospace">••••••••••••••••••••••••</span>
+              <button class="copy-btn" onclick="revealWebhookSecret()">Révéler</button>
+              <button class="copy-btn" onclick="copyWebhookSecret()">Copier</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Utilisez ce secret pour vérifier l'authenticité des webhooks NDSGPay. Header : <span style="font-family:monospace">X-NDSGPay-Signature</span></div>
+          </div>
         </div>
 
         <div class="api-key-card">
@@ -1853,6 +1864,35 @@
     if (co) co.value = merchant.name || '';
     if (ph) ph.value = merchant.phone || '';
     if (wh) wh.value = merchant.webhookUrl || '';
+
+    // Charger le webhook secret
+    const wsEl = document.getElementById('webhook-secret-display');
+    if (wsEl && merchant.webhookSecret) {
+      wsEl._full = merchant.webhookSecret;
+      wsEl._revealed = false;
+      wsEl.textContent = '••••••••••••••••••••••••';
+    }
+  }
+
+  function revealWebhookSecret() {
+    const el = document.getElementById('webhook-secret-display');
+    if (!el || !el._full) return;
+    if (el._revealed) {
+      el.textContent = '••••••••••••••••••••••••';
+      el._revealed = false;
+    } else {
+      el.textContent = el._full;
+      el._revealed = true;
+    }
+  }
+
+  function copyWebhookSecret() {
+    const el = document.getElementById('webhook-secret-display');
+    if (!el || !el._full) return;
+    navigator.clipboard.writeText(el._full).then(() => {
+      const btns = document.querySelectorAll('#webhook-secret-display ~ .copy-btn');
+      btns.forEach(b => { if (b.textContent === 'Copier') { b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 2000); }});
+    });
   }
 
   async function changePassword() {
