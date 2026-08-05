@@ -1561,6 +1561,7 @@
     if (name === 'retrait') loadRetraitPanel();
     if (name === 'team') loadTeam();
     if (name === 'poskeys') loadPosKeys();
+    if (name === 'settings') loadSettingsPanel();
   }
 
   // ── LOGIN ────────────────────────────────────────────────────
@@ -1857,6 +1858,16 @@
   });
 
   // ── SETTINGS ─────────────────────────────────────────────────
+  async function loadSettingsPanel() {
+    try {
+      const res = await fetch(`${API}/merchant/settings`, {
+        headers: { 'Authorization': `Bearer ${jwtToken}` }
+      });
+      const data = await res.json();
+      if (data.success) loadSettings(data.merchant);
+    } catch (e) { console.error('loadSettingsPanel error:', e); }
+  }
+
   async function loadSettings(merchant) {
     const co = document.getElementById('set-company');
     const ph = document.getElementById('set-phone');
