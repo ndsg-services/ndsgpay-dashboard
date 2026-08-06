@@ -1143,7 +1143,7 @@
     if (!body) return;
     body.innerHTML = '<div style="color:var(--muted);padding:20px">Chargement...</div>';
     try {
-      const res = await fetch(`${API}/admin/audit-logs`, { headers: { 'x-admin-key': ADMIN_KEY } });
+      const res = await fetch(`${API}/admin/audit-logs`, { headers: { 'x-admin-key': adminKey } });
       const data = await res.json();
       if (!data.success || !data.logs.length) {
         body.innerHTML = '<div style="color:var(--muted);padding:20px">Aucune action enregistrée</div>';
