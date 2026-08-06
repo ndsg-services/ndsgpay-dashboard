@@ -163,6 +163,7 @@
       <button class="tab-btn" id="tab-balances" onclick="switchTab('balances')">💰 Soldes</button>
       <button class="tab-btn" id="tab-operators" onclick="switchTab('operators')">📡 Opérateurs</button>
       <button class="tab-btn" id="tab-reconcile" onclick="switchTab('reconcile')">🔄 Réconciliation</button>
+      <button class="tab-btn" id="tab-audit" onclick="switchTab('audit')">🔍 Audit</button>
     </div>
 
     <!-- MARCHANDS -->
@@ -369,13 +370,16 @@
     document.getElementById('panel-balances').style.display     = tab === 'balances'     ? 'block' : 'none';
     document.getElementById('panel-operators').style.display    = tab === 'operators'    ? 'block' : 'none';
     document.getElementById('panel-reconcile').style.display   = tab === 'reconcile'   ? 'block' : 'none';
+    document.getElementById('panel-audit').style.display       = tab === 'audit'       ? 'block' : 'none';
     document.getElementById('tab-merchants').classList.toggle('active',    tab === 'merchants');
     document.getElementById('tab-transactions').classList.toggle('active', tab === 'transactions');
     document.getElementById('tab-withdrawals').classList.toggle('active',  tab === 'withdrawals');
     document.getElementById('tab-balances').classList.toggle('active',     tab === 'balances');
     document.getElementById('tab-operators').classList.toggle('active',    tab === 'operators');
     document.getElementById('tab-reconcile').classList.toggle('active',   tab === 'reconcile');
+    document.getElementById('tab-audit').classList.toggle('active',       tab === 'audit');
     if (tab === 'reconcile') loadReconciliationLogs();
+    if (tab === 'audit') loadAuditLogs();
     if (tab === 'transactions') {
       const s = document.getElementById('tx-search');
       if (s) s.value = '';
@@ -1134,6 +1138,69 @@
     }
   }
 
+  async function loadAuditLogs() {
+    const body = document.getElementById('audit-logs-body');
+    if (!body) return;
+    body.innerHTML = '<div style="color:var(--muted);padding:20px">Chargement...</div>';
+    try {
+      const res = await fetch(`${API}/admin/audit-logs`, { headers: { 'x-admin-key': ADMIN_KEY } });
+      const data = await res.json();
+      if (!data.success || !data.logs.length) {
+        body.innerHTML = '<div style="color:var(--muted);padding:20px">Aucune action enregistrée</div>';
+        return;
+      }
+      const actionLabels = {
+        MERCHANT_ACTIVATED:    { label: 'Marchand activé',    color: '#16a34a', bg: '#f0fdf4' },
+        MERCHANT_DEACTIVATED:  { label: 'Marchand désactivé', color: '#dc2626', bg: '#fef2f2' },
+        FEES_UPDATED:          { label: 'Frais modifiés',      color: '#d97706', bg: '#fffbeb' },
+        KEYS_REGENERATED:      { label: 'Clés régénérées',     color: '#2563eb', bg: '#eff6ff' },
+        RECONCILIATION:        { label: 'Réconciliation',      color: '#16a34a', bg: '#f0fdf4' },
+        CORRESPONDENT_FEE_SET: { label: 'Taux opérateur',      color: '#7c3aed', bg: '#f5f3ff' },
+      };
+      const rows = data.logs.map(log => {
+        const a = actionLabels[log.action] || { label: log.action, color: '#64748b', bg: '#f8fafc' };
+        const date = new Date(log.createdAt).toLocaleDateString('fr-FR') + ' ' +
+          new Date(log.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        return `<tr>
+          <td style="padding:10px 16px;font-size:12px;color:var(--muted)">${date}</td>
+          <td style="padding:10px 16px"><span style="background:${a.bg};color:${a.color};font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500">${a.label}</span></td>
+          <td style="padding:10px 16px;font-size:13px;font-weight:500">${log.targetName || '—'}</td>
+          <td style="padding:10px 16px;font-size:12px;color:var(--muted)">${log.detail || '—'}</td>
+        </tr>`;
+      }).join('');
+      body.innerHTML = `<table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f8fafc">
+          <th style="text-align:left;padding:10px 16px;font-size:11px;color:var(--muted);font-weight:500">Date</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;color:var(--muted);font-weight:500">Action</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;color:var(--muted);font-weight:500">Cible</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;color:var(--muted);font-weight:500">Détail</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+      // Stocker pour export CSV
+      window._auditLogs = data.logs;
+    } catch (e) {
+      body.innerHTML = '<div style="color:var(--danger);padding:20px">Erreur de chargement</div>';
+    }
+  }
+
+  function exportAuditCSV() {
+    const logs = window._auditLogs || [];
+    if (!logs.length) return;
+    const headers = ['Date', 'Action', 'Cible', 'Détail'];
+    const rows = logs.map(l => [
+      new Date(l.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(l.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}),
+      l.action, l.targetName || '', l.detail || ''
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `ndsgpay-audit-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
   async function loadReconciliationLogs() {
     const el = document.getElementById('reconcile-logs-body');
     try {
@@ -1346,6 +1413,18 @@
 </script>
 
     <!-- PANEL RECONCILIATION -->
+    <div id="panel-audit" style="display:none">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">🔍 Journal d'audit</div>
+          <button onclick="exportAuditCSV()" style="padding:5px 12px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--sans)">⬇ CSV</button>
+        </div>
+        <div id="audit-logs-body" style="min-height:100px">
+          <div style="color:var(--muted);padding:20px">Chargement...</div>
+        </div>
+      </div>
+    </div>
+
     <div id="panel-reconcile" style="display:none">
       <div class="table-card" style="margin-bottom:16px">
         <div class="table-header">
