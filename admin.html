@@ -649,27 +649,46 @@
     loadTransactions(type, status);
   }
 
+  const COUNTRY_NAMES = {
+    GAB: 'Gabon', CMR: 'Cameroun', COG: 'Congo', BEN: 'Bénin', CIV: "Côte d'Ivoire",
+    COD: 'RD Congo', KEN: 'Kenya', RWA: 'Rwanda', SEN: 'Sénégal', SLE: 'Sierra Leone',
+    UGA: 'Ouganda', ZMB: 'Zambie',
+  };
+  function countryFromCorrespondent(correspondent) {
+    if (!correspondent) return '';
+    const code = correspondent.split('_').pop();
+    return COUNTRY_NAMES[code] || code || '';
+  }
+
   function exportCSV() {
     const filter = document.getElementById('merchant-filter').value;
     const data = filter === 'all' ? allTransactions : allTransactions.filter(tx => tx.merchant?.name === filter);
 
     if (data.length === 0) { alert('Aucune transaction à exporter'); return; }
 
-    const headers = ['ID', 'Type', 'Marchand', 'Email', 'Opérateur', 'Numéro', 'Montant', 'Devise', 'Statut', 'Code erreur', 'Message erreur', 'Date'];
-    const rows = data.map(tx => [
-      tx.txId,
-      tx.type === 'deposit' ? 'Dépôt' : 'Payout',
-      tx.merchant?.name || '—',
-      tx.merchant?.email || '—',
-      tx.correspondent,
-      tx.msisdn,
-      tx.amount,
-      tx.currency || 'XAF',
-      tx.status,
-      tx.failureCode || '',
-      tx.failureMessage || '',
-      new Date(tx.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
-    ]);
+    const headers = ['ID', 'Type', 'Marchand', 'Email', 'Pays', 'Opérateur', 'Numéro', 'Montant', 'Devise', 'Statut', 'Frais', 'Montant net', 'Motif', 'Code erreur', 'Message erreur', 'Date'];
+    const rows = data.map(tx => {
+      const fee = tx.feeAmount != null ? tx.feeAmount : '';
+      const net = tx.feeAmount != null ? (tx.amount - tx.feeAmount) : '';
+      return [
+        tx.txId,
+        tx.type === 'deposit' ? 'Dépôt' : 'Payout',
+        tx.merchant?.name || '—',
+        tx.merchant?.email || '—',
+        countryFromCorrespondent(tx.correspondent),
+        tx.correspondent,
+        tx.msisdn,
+        tx.amount,
+        tx.currency || 'XAF',
+        tx.status,
+        fee,
+        net,
+        tx.description || '',
+        tx.failureCode || '',
+        tx.failureMessage || '',
+        new Date(tx.createdAt).toLocaleDateString('fr-FR') + ' ' + new Date(tx.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
+      ];
+    });
 
     const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });

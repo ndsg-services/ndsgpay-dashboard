@@ -800,6 +800,10 @@
         <span data-i18n="nav-transactions">Transactions</span>
         <span class="nav-badge">0</span>
       </button>
+      <button class="nav-item" onclick="showPanel('releve')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        <span data-i18n="nav-releve">Relevé</span>
+      </button>
       <button class="nav-item" onclick="showPanel('withdrawals')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><polyline points="8 18 4 22 8 26"/></svg>
         <span data-i18n="nav-withdrawals">Banque</span>
@@ -989,6 +993,37 @@
             <div class="empty-title">Aucune transaction pour l'instant</div>
             <div class="empty-desc">Intégrez l'API NDSGPay pour commencer à collecter des paiements mobile money.</div>
             <button class="btn-sm primary" onclick="showPanel('docs')">Démarrer l'intégration</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RELEVÉ ── -->
+      <div class="panel" id="panel-releve">
+        <div class="filters">
+          <select id="releve-filter-type" class="search-input" style="max-width:160px" onchange="loadReleve()">
+            <option value="">Tous types</option>
+            <option value="DEPOSIT">Dépôts</option>
+            <option value="PAYOUT">Payouts</option>
+            <option value="FEE">Frais</option>
+          </select>
+          <select id="releve-filter-correspondent" class="search-input" style="max-width:200px" onchange="loadReleve()">
+            <option value="">Tous opérateurs</option>
+          </select>
+          <input type="date" id="releve-filter-from" class="search-input" style="max-width:150px" onchange="loadReleve()" />
+          <input type="date" id="releve-filter-to" class="search-input" style="max-width:150px" onchange="loadReleve()" />
+        </div>
+
+        <div class="table-card" id="releve-table-card">
+          <div class="table-header">
+            <div class="table-title">Relevé</div>
+            <div class="table-actions"><button class="btn-sm" onclick="exportReleveCSV()">Exporter CSV</button></div>
+          </div>
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="empty-title">Aucune ligne pour l'instant</div>
+            <div class="empty-desc">Ton relevé apparaîtra ici dès qu'une transaction sera complétée.</div>
           </div>
         </div>
       </div>
@@ -1507,6 +1542,7 @@
     fr: {
       overview:     "Vue d'<em>ensemble</em>",
       transactions: "Transactions",
+      releve:       "Relevé",
       withdrawals:  "Banque",
       retrait:      "Retrait",
       analytics:    "Analytics",
@@ -1519,6 +1555,7 @@
     en: {
       overview:     "<em>Overview</em>",
       transactions: "Transactions",
+      releve:       "Statement",
       withdrawals:  "Bank",
       retrait:      "Withdrawal",
       analytics:    "Analytics",
@@ -1532,6 +1569,7 @@
   const panels = {
     overview:     { id: 'panel-overview'     },
     transactions: { id: 'panel-transactions' },
+    releve:       { id: 'panel-releve'       },
     withdrawals:  { id: 'panel-withdrawals'  },
     retrait:      { id: 'panel-retrait'      },
     analytics:    { id: 'panel-analytics'    },
@@ -1557,6 +1595,7 @@
     });
     if (name === 'overview' || name === 'analytics') loadStats();
     if (name === 'transactions') loadTransactions();
+    if (name === 'releve') loadReleve();
     if (name === 'withdrawals') loadWithdrawals();
     if (name === 'retrait') loadRetraitPanel();
     if (name === 'team') loadTeam();
@@ -2526,6 +2565,135 @@
       </table>`;
   }
 
+  // ── RELEVÉ (STATEMENT) ─────────────────────────────────────────
+  const RELEVE_TYPE_LABELS = { DEPOSIT: '📥 Dépôt', PAYOUT: '📤 Payout', FEE: '💸 Frais NDSGPay' };
+
+  async function loadReleve() {
+    if (!jwtToken) return;
+    try {
+      const type = document.getElementById('releve-filter-type')?.value || '';
+      const correspondent = document.getElementById('releve-filter-correspondent')?.value || '';
+      const from = document.getElementById('releve-filter-from')?.value || '';
+      const to = document.getElementById('releve-filter-to')?.value || '';
+
+      const params = new URLSearchParams();
+      if (type) params.set('type', type);
+      if (correspondent) params.set('correspondent', correspondent);
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+
+      const res = await fetch(`${API}/merchant/ledger?${params.toString()}`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const data = await res.json();
+      const entries = data.entries || [];
+
+      populateReleveCorrespondentFilter(entries);
+      renderReleve(entries);
+    } catch (err) {
+      console.error('Relevé error:', err);
+    }
+  }
+
+  function populateReleveCorrespondentFilter(entries) {
+    const sel = document.getElementById('releve-filter-correspondent');
+    if (!sel || sel.dataset.populated) return;
+    const seen = new Set();
+    entries.forEach(e => seen.add(e.correspondent));
+    seen.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+    if (seen.size > 0) sel.dataset.populated = '1';
+  }
+
+  function renderReleve(entries) {
+    const container = document.getElementById('releve-table-card');
+    if (!container) return;
+
+    if (entries.length === 0) {
+      container.innerHTML = `
+        <div class="table-header">
+          <div class="table-title">Relevé</div>
+          <div class="table-actions"><button class="btn-sm" onclick="exportReleveCSV()">Exporter CSV</button></div>
+        </div>
+        <div class="empty-state">
+          <div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div class="empty-title">Aucune ligne pour l'instant</div>
+          <div class="empty-desc">Ton relevé apparaîtra ici dès qu'une transaction sera complétée.</div>
+        </div>`;
+      return;
+    }
+
+    const rows = entries.map(e => {
+      const country = ndsgCountryFromCorrespondent(e.correspondent);
+      const label = RELEVE_TYPE_LABELS[e.type] || e.type;
+      const amountColor = e.amount < 0 ? 'var(--danger)' : 'var(--success)';
+      return `
+      <tr>
+        <td class="td-muted">${new Date(e.createdAt).toLocaleDateString('fr-FR')} ${new Date(e.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</td>
+        <td>${country}</td>
+        <td>${e.correspondent}</td>
+        <td>${label}</td>
+        <td style="font-weight:500;color:${amountColor}">${e.amount > 0 ? '+' : ''}${new Intl.NumberFormat('fr-FR').format(Math.round(e.amount))}</td>
+        <td class="td-muted">${e.description || ''}</td>
+        <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(Math.round(e.balanceAfter))}</td>
+      </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="table-header">
+        <div class="table-title">Relevé</div>
+        <div class="table-actions"><button class="btn-sm" onclick="exportReleveCSV()">Exporter CSV</button></div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Pays</th><th>Correspondant</th><th>Type</th><th>Montant</th><th>Motif</th><th>Solde après</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  async function exportReleveCSV() {
+    if (!jwtToken) return;
+    try {
+      const type = document.getElementById('releve-filter-type')?.value || '';
+      const correspondent = document.getElementById('releve-filter-correspondent')?.value || '';
+      const from = document.getElementById('releve-filter-from')?.value || '';
+      const to = document.getElementById('releve-filter-to')?.value || '';
+      const params = new URLSearchParams();
+      if (type) params.set('type', type);
+      if (correspondent) params.set('correspondent', correspondent);
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+
+      const res = await fetch(`${API}/merchant/ledger?${params.toString()}`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const data = await res.json();
+      const entries = data.entries || [];
+      if (entries.length === 0) { alert('Aucune ligne à exporter'); return; }
+
+      const headers = ['Date', 'Pays', 'Correspondant', 'Type', 'Montant', 'Motif', 'Solde après'];
+      const rows = entries.map(e => [
+        new Date(e.createdAt).toISOString(),
+        ndsgCountryFromCorrespondent(e.correspondent),
+        e.correspondent,
+        e.type,
+        e.amount,
+        e.description || '',
+        e.balanceAfter
+      ]);
+
+      const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+      a.href = url; a.download = `ndsgpay-releve-${date}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export Relevé CSV error:', err);
+    }
+  }
+
   // ── FILTERS ──────────────────────────────────────────────────
   function filterTx(btn, type) {
     document.querySelectorAll('#panel-transactions .filter-btn').forEach(b => b.classList.remove('active'));
@@ -2985,6 +3153,17 @@
   }
 
   // ── EXPORT CSV ───────────────────────────────────────────────
+  const NDSG_COUNTRY_NAMES = {
+    GAB: 'Gabon', CMR: 'Cameroun', COG: 'Congo', BEN: 'Bénin', CIV: "Côte d'Ivoire",
+    COD: 'RD Congo', KEN: 'Kenya', RWA: 'Rwanda', SEN: 'Sénégal', SLE: 'Sierra Leone',
+    UGA: 'Ouganda', ZMB: 'Zambie',
+  };
+  function ndsgCountryFromCorrespondent(correspondent) {
+    if (!correspondent) return '';
+    const code = correspondent.split('_').pop();
+    return NDSG_COUNTRY_NAMES[code] || code || '';
+  }
+
   async function exportCSV() {
     if (!jwtToken) return;
     try {
@@ -3000,19 +3179,27 @@
 
       const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
       const headers = lang === 'en'
-        ? ['ID', 'Type', 'Operator', 'Phone', 'Amount', 'Currency', 'Status', 'Date']
-        : ['ID', 'Type', 'Operateur', 'Numero', 'Montant', 'Devise', 'Statut', 'Date'];
+        ? ['ID', 'Type', 'Country', 'Operator', 'Phone', 'Amount', 'Currency', 'Status', 'Fee', 'Net amount', 'Reason', 'Date']
+        : ['ID', 'Type', 'Pays', 'Opérateur', 'Numero', 'Montant', 'Devise', 'Statut', 'Frais', 'Montant net', 'Motif', 'Date'];
 
-      const rows = all.map(tx => [
-        tx.type === 'deposit' ? (tx.depositId || tx.id) : (tx.payoutId || tx.id),
-        tx.type === 'deposit' ? (lang === 'en' ? 'Collection' : 'Collecte') : 'Payout',
-        tx.correspondent || '',
-        tx.msisdn || '',
-        tx.amount,
-        tx.currency || 'XAF',
-        tx.status,
-        new Date(tx.createdAt).toISOString()
-      ]);
+      const rows = all.map(tx => {
+        const fee = tx.feeAmount != null ? tx.feeAmount : '';
+        const net = tx.feeAmount != null ? (tx.amount - tx.feeAmount) : '';
+        return [
+          tx.type === 'deposit' ? (tx.depositId || tx.id) : (tx.payoutId || tx.id),
+          tx.type === 'deposit' ? (lang === 'en' ? 'Collection' : 'Collecte') : 'Payout',
+          ndsgCountryFromCorrespondent(tx.correspondent),
+          tx.correspondent || '',
+          tx.msisdn || '',
+          tx.amount,
+          tx.currency || 'XAF',
+          tx.status,
+          fee,
+          net,
+          tx.description || '',
+          new Date(tx.createdAt).toISOString()
+        ];
+      });
 
       const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
