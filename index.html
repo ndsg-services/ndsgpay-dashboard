@@ -1009,6 +1009,9 @@
           <select id="releve-filter-correspondent" class="search-input" style="max-width:200px" onchange="loadReleve()">
             <option value="">Tous opérateurs</option>
           </select>
+          <select id="releve-filter-currency" class="search-input" style="max-width:130px" onchange="loadReleve()">
+            <option value="">Toutes devises</option>
+          </select>
           <input type="date" id="releve-filter-from" class="search-input" style="max-width:150px" onchange="loadReleve()" />
           <input type="date" id="releve-filter-to" class="search-input" style="max-width:150px" onchange="loadReleve()" />
         </div>
@@ -2573,12 +2576,14 @@
     try {
       const type = document.getElementById('releve-filter-type')?.value || '';
       const correspondent = document.getElementById('releve-filter-correspondent')?.value || '';
+      const currency = document.getElementById('releve-filter-currency')?.value || '';
       const from = document.getElementById('releve-filter-from')?.value || '';
       const to = document.getElementById('releve-filter-to')?.value || '';
 
       const params = new URLSearchParams();
       if (type) params.set('type', type);
       if (correspondent) params.set('correspondent', correspondent);
+      if (currency) params.set('currency', currency);
       if (from) params.set('from', from);
       if (to) params.set('to', to);
 
@@ -2587,6 +2592,7 @@
       const entries = data.entries || [];
 
       populateReleveCorrespondentFilter(entries);
+      populateReleveCurrencyFilter(entries);
       renderReleve(entries);
     } catch (err) {
       console.error('Relevé error:', err);
@@ -2598,6 +2604,19 @@
     if (!sel || sel.dataset.populated) return;
     const seen = new Set();
     entries.forEach(e => seen.add(e.correspondent));
+    seen.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+    if (seen.size > 0) sel.dataset.populated = '1';
+  }
+
+  function populateReleveCurrencyFilter(entries) {
+    const sel = document.getElementById('releve-filter-currency');
+    if (!sel || sel.dataset.populated) return;
+    const seen = new Set();
+    entries.forEach(e => seen.add(e.currency));
     seen.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c; opt.textContent = c;
@@ -2634,9 +2653,9 @@
         <td>${country}</td>
         <td>${e.correspondent}</td>
         <td>${label}</td>
-        <td style="font-weight:500;color:${amountColor}">${e.amount > 0 ? '+' : ''}${new Intl.NumberFormat('fr-FR').format(Math.round(e.amount))}</td>
+        <td style="font-weight:500;color:${amountColor}">${e.amount > 0 ? '+' : ''}${new Intl.NumberFormat('fr-FR').format(Math.round(e.amount))} ${e.currency}</td>
         <td class="td-muted">${e.description || ''}</td>
-        <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(Math.round(e.balanceAfter))}</td>
+        <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(Math.round(e.balanceAfter))} ${e.currency}</td>
       </tr>`;
     }).join('');
 
@@ -2658,11 +2677,13 @@
     try {
       const type = document.getElementById('releve-filter-type')?.value || '';
       const correspondent = document.getElementById('releve-filter-correspondent')?.value || '';
+      const currency = document.getElementById('releve-filter-currency')?.value || '';
       const from = document.getElementById('releve-filter-from')?.value || '';
       const to = document.getElementById('releve-filter-to')?.value || '';
       const params = new URLSearchParams();
       if (type) params.set('type', type);
       if (correspondent) params.set('correspondent', correspondent);
+      if (currency) params.set('currency', currency);
       if (from) params.set('from', from);
       if (to) params.set('to', to);
 
@@ -2671,11 +2692,12 @@
       const entries = data.entries || [];
       if (entries.length === 0) { alert('Aucune ligne à exporter'); return; }
 
-      const headers = ['Date', 'Pays', 'Correspondant', 'Type', 'Montant', 'Motif', 'Solde après'];
+      const headers = ['Date', 'Pays', 'Correspondant', 'Devise', 'Type', 'Montant', 'Motif', 'Solde après'];
       const rows = entries.map(e => [
         new Date(e.createdAt).toISOString(),
         ndsgCountryFromCorrespondent(e.correspondent),
         e.correspondent,
+        e.currency,
         e.type,
         e.amount,
         e.description || '',
