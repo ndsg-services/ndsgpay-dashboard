@@ -1000,20 +1000,20 @@
       <!-- ── RELEVÉ ── -->
       <div class="panel" id="panel-releve">
         <div class="filters">
-          <select id="releve-filter-type" class="search-input" style="max-width:160px" onchange="loadReleve()">
+          <select id="releve-filter-type" class="search-input" style="max-width:160px" onchange="releveFilterChanged()">
             <option value="">Tous types</option>
             <option value="DEPOSIT">Dépôts</option>
             <option value="PAYOUT">Payouts</option>
             <option value="FEE">Frais</option>
           </select>
-          <select id="releve-filter-correspondent" class="search-input" style="max-width:200px" onchange="loadReleve()">
+          <select id="releve-filter-correspondent" class="search-input" style="max-width:200px" onchange="releveFilterChanged()">
             <option value="">Tous opérateurs</option>
           </select>
-          <select id="releve-filter-currency" class="search-input" style="max-width:130px" onchange="loadReleve()">
+          <select id="releve-filter-currency" class="search-input" style="max-width:130px" onchange="releveFilterChanged()">
             <option value="">Toutes devises</option>
           </select>
-          <input type="date" id="releve-filter-from" class="search-input" style="max-width:150px" onchange="loadReleve()" />
-          <input type="date" id="releve-filter-to" class="search-input" style="max-width:150px" onchange="loadReleve()" />
+          <input type="date" id="releve-filter-from" class="search-input" style="max-width:150px" onchange="releveFilterChanged()" />
+          <input type="date" id="releve-filter-to" class="search-input" style="max-width:150px" onchange="releveFilterChanged()" />
         </div>
 
         <div class="table-card" id="releve-table-card">
@@ -2570,6 +2570,20 @@
 
   // ── RELEVÉ (STATEMENT) ─────────────────────────────────────────
   const RELEVE_TYPE_LABELS = { DEPOSIT: '📥 Dépôt', PAYOUT: '📤 Payout', FEE: '💸 Frais NDSGPay' };
+  let releveCurrentPage = 1;
+  let releveTotalPages = 1;
+
+  function releveFilterChanged() {
+    releveCurrentPage = 1;
+    loadReleve();
+  }
+
+  function releveGoToPage(delta) {
+    const next = releveCurrentPage + delta;
+    if (next < 1 || next > releveTotalPages) return;
+    releveCurrentPage = next;
+    loadReleve();
+  }
 
   async function loadReleve() {
     if (!jwtToken) return;
@@ -2586,14 +2600,17 @@
       if (currency) params.set('currency', currency);
       if (from) params.set('from', from);
       if (to) params.set('to', to);
+      params.set('page', releveCurrentPage);
+      params.set('limit', 100);
 
       const res = await fetch(`${API}/merchant/ledger?${params.toString()}`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
       const data = await res.json();
       const entries = data.entries || [];
+      releveTotalPages = data.pages || 1;
 
       populateReleveCorrespondentFilter(entries);
       populateReleveCurrencyFilter(entries);
-      renderReleve(entries);
+      renderReleve(entries, data.total || entries.length);
     } catch (err) {
       console.error('Relevé error:', err);
     }
@@ -2625,7 +2642,7 @@
     if (seen.size > 0) sel.dataset.populated = '1';
   }
 
-  function renderReleve(entries) {
+  function renderReleve(entries, total) {
     const container = document.getElementById('releve-table-card');
     if (!container) return;
 
@@ -2659,6 +2676,14 @@
       </tr>`;
     }).join('');
 
+    const showPagination = releveTotalPages > 1;
+    const paginationHtml = showPagination ? `
+      <div style="display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 0;font-size:13px;color:var(--text-muted)">
+        <button class="btn-sm" onclick="releveGoToPage(-1)" ${releveCurrentPage <= 1 ? 'disabled' : ''}>← Précédent</button>
+        <span>Page ${releveCurrentPage} / ${releveTotalPages} (${total} ligne${total > 1 ? 's' : ''})</span>
+        <button class="btn-sm" onclick="releveGoToPage(1)" ${releveCurrentPage >= releveTotalPages ? 'disabled' : ''}>Suivant →</button>
+      </div>` : '';
+
     container.innerHTML = `
       <div class="table-header">
         <div class="table-title">Relevé</div>
@@ -2669,7 +2694,8 @@
           <th>Date</th><th>Pays</th><th>Correspondant</th><th>Type</th><th>Montant</th><th>Motif</th><th>Solde après</th>
         </tr></thead>
         <tbody>${rows}</tbody>
-      </table>`;
+      </table>
+      ${paginationHtml}`;
   }
 
   async function exportReleveCSV() {
@@ -2686,6 +2712,7 @@
       if (currency) params.set('currency', currency);
       if (from) params.set('from', from);
       if (to) params.set('to', to);
+      params.set('limit', 10000); // l'export doit couvrir tout l'historique filtré, pas une seule page
 
       const res = await fetch(`${API}/merchant/ledger?${params.toString()}`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
       const data = await res.json();
