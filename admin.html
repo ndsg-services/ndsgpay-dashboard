@@ -283,7 +283,16 @@
 
 <script>
   const API = 'https://ndsgpay-backend.vercel.app/api';
+  const ADMIN_SESSION_TTL = 8 * 60 * 60 * 1000; // 8 heures en ms
   let adminKey = sessionStorage.getItem('ndsgpay_admin_key') || null;
+  let adminLoginAt = parseInt(sessionStorage.getItem('ndsgpay_admin_login_at') || '0');
+
+  // Vérifier si la session admin a expiré
+  if (adminKey && adminLoginAt && (Date.now() - adminLoginAt) > ADMIN_SESSION_TTL) {
+    adminKey = null;
+    sessionStorage.removeItem('ndsgpay_admin_key');
+    sessionStorage.removeItem('ndsgpay_admin_login_at');
+  }
   let allMerchants = [];
   let allTransactions = [];
   let currentTxType = 'all';
@@ -316,6 +325,7 @@
 
       adminKey = key;
       sessionStorage.setItem('ndsgpay_admin_key', adminKey);
+      sessionStorage.setItem('ndsgpay_admin_login_at', Date.now().toString());
       loadApp(data.stats);
 
     } catch (err) {
@@ -340,6 +350,7 @@
   function doLogout() {
     adminKey = null;
     sessionStorage.removeItem('ndsgpay_admin_key');
+    sessionStorage.removeItem('ndsgpay_admin_login_at');
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('admin-key').value = '';
