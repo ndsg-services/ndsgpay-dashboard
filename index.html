@@ -1510,6 +1510,18 @@
 <script>
   // ── PANELS ─────────────────────────────────────────────────
   const API = 'https://ndsgpay-backend.vercel.app/api';
+
+  // Échappement HTML pour prévenir les attaques XSS
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+  }
+
   let jwtToken = sessionStorage.getItem('ndsgpay_jwt') || null;
   let currentMerchant = null;
 
@@ -2692,7 +2704,7 @@
         <td>${e.correspondent}</td>
         <td>${label}</td>
         <td style="font-weight:500;color:${amountColor}">${e.amount > 0 ? '+' : ''}${new Intl.NumberFormat('fr-FR').format(Math.round(e.amount))} ${e.currency}</td>
-        <td class="td-muted">${e.description || ''}</td>
+        <td class="td-muted">${escapeHtml(e.description)}</td>
         <td style="font-weight:500">${new Intl.NumberFormat('fr-FR').format(Math.round(e.balanceAfter))} ${e.currency}</td>
       </tr>`;
     }).join('');
