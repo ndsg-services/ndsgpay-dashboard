@@ -1513,12 +1513,33 @@
   let jwtToken = sessionStorage.getItem('ndsgpay_jwt') || null;
   let currentMerchant = null;
 
-  // ── INIT ────────────────────────────────────────────────────
+  // ── GESTION SESSION EXPIRÉE ──────────────────────────────────
+  // Wrapper fetch centralisé — redirige vers login si token expiré (401)
+  async function apiFetch(url, options = {}) {
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+      console.warn('[Session] Token expiré — déconnexion automatique');
+      jwtToken = null;
+      currentMerchant = null;
+      sessionStorage.clear();
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+      showLogin();
+      // Afficher un message explicite
+      const errEl = document.getElementById('login-error');
+      if (errEl) {
+        errEl.textContent = 'Votre session a expiré. Veuillez vous reconnecter.';
+        errEl.style.display = 'block';
+      }
+      throw new Error('Session expirée');
+    }
+    return res;
+  }
   window.addEventListener('DOMContentLoaded', async () => {
     if (jwtToken) {
       // Toujours recharger les données fraîches depuis le backend
       try {
-        const res = await fetch(`${API}/auth/me`, {
+        const res = await apiFetch(`${API}/auth/me`, {
           headers: { 'Authorization': `Bearer ${jwtToken}` }
         });
         const data = await res.json();
@@ -1902,7 +1923,7 @@
   // ── SETTINGS ─────────────────────────────────────────────────
   async function loadSettingsPanel() {
     try {
-      const res = await fetch(`${API}/merchant/settings`, {
+      const res = await apiFetch(`${API}/merchant/settings`, {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const data = await res.json();
@@ -2008,7 +2029,7 @@
     msg.style.display = 'none';
 
     try {
-      const res = await fetch(API + '/merchant/settings', {
+      const res = await apiFetch(API + '/merchant/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwtToken },
         body: JSON.stringify({ webhookUrl, companyName, phone })
@@ -2046,7 +2067,7 @@
     btn.textContent = 'Generation...';
 
     try {
-      const res = await fetch(API + '/merchant/rotate-keys', {
+      const res = await apiFetch(API + '/merchant/rotate-keys', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + jwtToken }
       });
@@ -2168,7 +2189,7 @@
   async function loadStats() {
     if (!jwtToken) return;
     try {
-      const res = await fetch(`${API}/stats`, {
+      const res = await apiFetch(`${API}/stats`, {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const data = await res.json();
@@ -2603,7 +2624,7 @@
       params.set('page', releveCurrentPage);
       params.set('limit', 100);
 
-      const res = await fetch(`${API}/merchant/ledger?${params.toString()}`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const res = await apiFetch(`${API}/merchant/ledger?${params.toString()}`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
       const data = await res.json();
       const entries = data.entries || [];
       releveTotalPages = data.pages || 1;
@@ -2714,7 +2735,7 @@
       if (to) params.set('to', to);
       params.set('limit', 10000); // l'export doit couvrir tout l'historique filtré, pas une seule page
 
-      const res = await fetch(`${API}/merchant/ledger?${params.toString()}`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const res = await apiFetch(`${API}/merchant/ledger?${params.toString()}`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
       const data = await res.json();
       const entries = data.entries || [];
       if (entries.length === 0) { alert('Aucune ligne à exporter'); return; }
@@ -2810,7 +2831,7 @@
   async function loadWithdrawals() {
     if (!jwtToken) return;
     try {
-      const res = await fetch(`${API}/withdrawals`, {
+      const res = await apiFetch(`${API}/withdrawals`, {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const data = await res.json();
@@ -2883,7 +2904,7 @@
     const list = document.getElementById('wd-balances-list');
     list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>';
     try {
-      const res  = await fetch(`${API}/withdrawals/balances`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const res  = await apiFetch(`${API}/withdrawals/balances`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
       const data = await res.json();
       if (!data.success || data.balances.length === 0) {
         list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Aucun solde disponible pour le moment.</div>';
@@ -2953,7 +2974,7 @@
     btn.textContent = 'Envoi...';
 
     try {
-      const res = await fetch(`${API}/withdrawals`, {
+      const res = await apiFetch(`${API}/withdrawals`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
         body: JSON.stringify({
@@ -3018,7 +3039,7 @@
   async function loadRetraitPanel() {
     // Réutiliser les données de stats déjà chargées
     try {
-      const res = await fetch(`${API}/stats`, {
+      const res = await apiFetch(`${API}/stats`, {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const data = await res.json();
@@ -3070,7 +3091,7 @@
 
     // Limites PawaPay
     try {
-      const r = await fetch(API + '/merchant/correspondent-limits', {
+      const r = await apiFetch(API + '/merchant/correspondent-limits', {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const d = await r.json();
@@ -3087,7 +3108,7 @@
 
   async function loadRetraitHistory() {
     try {
-      const r = await fetch(API + '/merchant/withdrawals', {
+      const r = await apiFetch(API + '/merchant/withdrawals', {
         headers: { 'Authorization': 'Bearer ' + jwtToken }
       });
       const d = await r.json();
@@ -3158,7 +3179,7 @@
     btn.textContent = 'Envoi...';
 
     try {
-      const r = await fetch(API + '/merchant/withdrawal', {
+      const r = await apiFetch(API + '/merchant/withdrawal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwtToken },
         body: JSON.stringify({ amount, currency: 'XAF', correspondent, msisdn, description })
@@ -3266,7 +3287,7 @@
   async function loadTeam() {
     if (!jwtToken) return;
     try {
-      const res  = await fetch(`${API}/team`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const res  = await apiFetch(`${API}/team`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
       const data = await res.json();
       if (!data.success) return;
 
@@ -3333,7 +3354,7 @@
     const msg  = document.getElementById('invite-msg');
     if (!em) { msg.style.color = 'var(--danger)'; msg.textContent = 'Email requis.'; return; }
     try {
-      const res  = await fetch(`${API}/team/invite`, {
+      const res  = await apiFetch(`${API}/team/invite`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${jwtToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: em, name, role })
@@ -3356,7 +3377,7 @@
     const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
     if (!confirm(lang === 'en' ? 'Remove this member?' : "Retirer ce membre de l'equipe ?")) return;
     try {
-      const res  = await fetch(`${API}/team/${userId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const res  = await apiFetch(`${API}/team/${userId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } });
       const data = await res.json();
       if (data.success) loadTeam(); else alert(data.error || 'Erreur');
     } catch (err) { alert('Erreur reseau'); }
@@ -3364,7 +3385,7 @@
 
   async function cancelInvite(inviteId) {
     try {
-      await fetch(`${API}/team/invites/${inviteId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      await apiFetch(`${API}/team/invites/${inviteId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } });
       loadTeam();
     } catch (err) { console.error(err); }
   }
@@ -3378,7 +3399,7 @@
     if (!list) return;
     list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>';
     try {
-      const res  = await fetch(API + '/pos-keys', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      const res  = await apiFetch(API + '/pos-keys', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
       const data = await res.json();
       if (!data.success) return;
       const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
@@ -3435,7 +3456,7 @@
     const msg          = document.getElementById('poskey-msg');
     if (!label) { msg.style.color = 'var(--danger)'; msg.textContent = 'Nom requis.'; return; }
     try {
-      const res  = await fetch(API + '/pos-keys', {
+      const res  = await apiFetch(API + '/pos-keys', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + jwtToken, 'Content-Type': 'application/json' },
         body: JSON.stringify({ label, scopeDeposit, scopePayout })
@@ -3450,7 +3471,7 @@
 
   async function togglePosKey(id, isActive) {
     try {
-      await fetch(API + '/pos-keys/' + id, {
+      await apiFetch(API + '/pos-keys/' + id, {
         method: 'PATCH',
         headers: { 'Authorization': 'Bearer ' + jwtToken, 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive })
@@ -3463,7 +3484,7 @@
     const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
     if (!confirm(lang === 'en' ? 'Delete key "' + label + '"?' : 'Supprimer la clé "' + label + '" ?')) return;
     try {
-      await fetch(API + '/pos-keys/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      await apiFetch(API + '/pos-keys/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + jwtToken } });
       loadPosKeys();
     } catch (err) { alert('Erreur reseau'); }
   }
@@ -3474,7 +3495,7 @@
     document.getElementById('qr-url').textContent = '';
     document.getElementById('poskey-qr-modal').style.display = 'flex';
     try {
-      const res  = await fetch(API + '/pos-keys/' + id + '/qr', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      const res  = await apiFetch(API + '/pos-keys/' + id + '/qr', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
       const data = await res.json();
       if (data.success) {
         currentQRUrl = data.activationUrl;
@@ -3553,7 +3574,7 @@
     list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0">Chargement...</div>';
     try {
       const url  = `${API}/pos-keys/${id}/transactions?from=${from}&to=${to}`;
-      const res  = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+      const res  = await apiFetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
       const data = await res.json();
       if (!data.success) { list.innerHTML = '<div style="color:var(--danger);font-size:13px">Erreur</div>'; return; }
 
