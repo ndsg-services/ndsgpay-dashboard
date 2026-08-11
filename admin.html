@@ -302,7 +302,22 @@
 
   // Init
   window.addEventListener('DOMContentLoaded', () => {
-    if (adminKey) loadApp();
+    if (adminKey) {
+      loadApp();
+      // Vérifier l'expiration de session toutes les minutes
+      setInterval(() => {
+        const loginAt = parseInt(sessionStorage.getItem('ndsgpay_admin_login_at') || '0');
+        if (loginAt && (Date.now() - loginAt) > ADMIN_SESSION_TTL) {
+          console.warn('[Admin] Session expirée — déconnexion automatique');
+          doLogout();
+          const errEl = document.getElementById('login-error');
+          if (errEl) {
+            errEl.textContent = 'Votre session a expiré. Veuillez vous reconnecter.';
+            errEl.style.display = 'block';
+          }
+        }
+      }, 60 * 1000); // toutes les 60 secondes
+    }
     loadAdminSuccessRate(); // route publique — pas besoin d'auth
   });
 
