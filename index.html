@@ -3165,9 +3165,34 @@
     }
   }
 
-  function retraitToutRetirer() {
-    if (retraitBalance > 0) {
-      document.getElementById('retrait-amount').value = Math.floor(retraitBalance);
+  // Remplit le montant avec le MAXIMUM réellement retirable : le frais NDSGPay dépend de
+  // l'opérateur choisi, donc on demande le calcul au serveur (solde − frais).
+  async function retraitToutRetirer() {
+    const errEl = document.getElementById('retrait-error');
+    const corr = document.getElementById('retrait-correspondent').value;
+    const showErr = (msg) => { errEl.textContent = msg; errEl.style.display = 'block'; };
+    errEl.style.display = 'none';
+
+    if (!corr) { showErr('Choisissez d\'abord un opérateur : le maximum dépend de ses frais.'); return; }
+
+    try {
+      const r = await apiFetch(`${API}/merchant/withdrawal-max?correspondent=${encodeURIComponent(corr)}&currency=XAF`, {
+        headers: { 'Authorization': `Bearer ${jwtToken}` }
+      });
+      const d = await r.json();
+      if (!d.success) { showErr(d.error || 'Impossible de calculer le maximum.'); return; }
+
+      // Ne pas dépasser non plus le plafond de l'opérateur côté PawaPay
+      const opMax = retraitLimits[corr]?.payout?.max;
+      const max = opMax ? Math.min(d.max, opMax) : d.max;
+
+      if (max > 0) {
+        document.getElementById('retrait-amount').value = max;
+      } else {
+        showErr('Solde insuffisant pour un retrait (frais NDSGPay inclus).');
+      }
+    } catch (e) {
+      showErr('Erreur réseau.');
     }
   }
 
