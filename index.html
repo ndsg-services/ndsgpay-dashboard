@@ -1276,7 +1276,10 @@
 <span class="c-green">https://ndsgpay-backend.vercel.app/api</span>
 
 <span class="c-gray2"># Authentification : utilisez votre clé secrète NDSGPay (sk_live_)</span>
-<span class="c-gray2"># NE PAS utiliser un token PawaPay — NDSGPay gère PawaPay pour vous</span></pre>
+<span class="c-gray2"># NE PAS utiliser un token PawaPay — NDSGPay gère PawaPay pour vous</span>
+<span class="c-gray2"># Les requêtes POST doivent envoyer l'en-tête Content-Type: application/json</span>
+<span class="c-gray2"># Limites par clé API : 60 créations de paiement/min, 120 consultations/min (HTTP 429 au-delà)</span>
+<span class="c-gray2"># Opérateurs : contactez support@ndsgservices.com pour la liste activée sur votre compte</span></pre>
             </div>
           </div>
         </div>
@@ -1287,62 +1290,200 @@
           <div class="endpoint-card">
             <div class="endpoint-bar">
               <span class="method-badge post">POST</span>
-              <span class="endpoint-path">/api/deposits</span>
+              <span class="endpoint-path">/api/pay/deposits</span>
               <span class="endpoint-desc">Initier une collecte</span>
             </div>
             <div class="endpoint-body">
               <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://ndsgpay-backend.vercel.app/api/pay/deposits"</span>, {
   method: <span class="c-green">"POST"</span>,
-  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">votre_sk_live_xxx</span>}`</span> },
+  headers: {
+    <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${votre_sk_live_xxx}`</span>,
+    <span class="c-green">"Content-Type"</span>: <span class="c-green">"application/json"</span>
+  },
+  <span class="c-gray2">// Pas de depositId à envoyer : NDSGPay génère l'identifiant et vous le renvoie.</span>
   body: JSON.stringify({
-    depositId: <span class="c-yellow">uuid()</span>,          <span class="c-gray2">// ID unique de votre côté</span>
-    amount: <span class="c-yellow">"5000"</span>,              <span class="c-gray2">// en XAF</span>
+    amount: <span class="c-green">"5000"</span>,               <span class="c-gray2">// en XAF</span>
     currency: <span class="c-green">"XAF"</span>,
-    correspondent: <span class="c-yellow">"VOTRE_CORRESPONDENT"</span>,  <span class="c-gray2">// ex: AIRTEL_GAB, MTN_MOMO_CMR</span>
-    msisdn: <span class="c-yellow">"NUMERO_CLIENT"</span>,  <span class="c-gray2">// ex: "24177000000", "237600000000"</span>
-    description: <span class="c-green">"Commande #1042"</span>
+    correspondent: <span class="c-green">"AIRTEL_GAB"</span>,  <span class="c-gray2">// code opérateur : AIRTEL_GAB, MTN_MOMO_CMR, MTN_MOMO_BEN...</span>
+    msisdn: <span class="c-green">"24177000000"</span>,        <span class="c-gray2">// numéro du client, format international sans + ni espaces</span>
+    description: <span class="c-green">"Commande 1042"</span>  <span class="c-gray2">// facultatif : 4 à 22 caractères, lettres/chiffres/espaces uniquement</span>
   })
-});</pre>
+});
+<span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
+
+<span class="c-gray2">// Réponse 200</span>
+<span class="c-gray2">// {</span>
+<span class="c-gray2">//   "success": true,</span>
+<span class="c-gray2">//   "depositId": "b3f0c8e2-...",  // généré par NDSGPay : conservez-le pour suivre la transaction</span>
+<span class="c-gray2">//   "status": "INITIATED",</span>
+<span class="c-gray2">//   "message": "Paiement initié. Le client va recevoir une demande de confirmation sur son téléphone."</span>
+<span class="c-gray2">// }</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// Erreurs</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Champs requis manquants : amount, correspondent, msisdn" }</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Correspondant invalide : ..." }   ou refus de l'opérateur</span>
+<span class="c-gray2">// 401  clé API manquante ou invalide          403  compte non activé</span>
+<span class="c-gray2">// 429  trop de requêtes                       500  erreur à l'initiation (voir le champ "details")</span></pre>
             </div>
           </div>
 
           <div class="endpoint-card">
             <div class="endpoint-bar">
               <span class="method-badge post">POST</span>
-              <span class="endpoint-path">/api/payouts</span>
+              <span class="endpoint-path">/api/pay/payouts</span>
               <span class="endpoint-desc">Envoyer des fonds</span>
             </div>
             <div class="endpoint-body">
               <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://ndsgpay-backend.vercel.app/api/pay/payouts"</span>, {
   method: <span class="c-green">"POST"</span>,
-  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${<span class="c-blue2">votre_sk_live_xxx</span>}`</span> },
+  headers: {
+    <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${votre_sk_live_xxx}`</span>,
+    <span class="c-green">"Content-Type"</span>: <span class="c-green">"application/json"</span>
+  },
   body: JSON.stringify({
-    payoutId: <span class="c-yellow">uuid()</span>,
-    amount: <span class="c-yellow">"10000"</span>,
+    amount: <span class="c-green">"10000"</span>,
     currency: <span class="c-green">"XAF"</span>,
-    correspondent: <span class="c-yellow">"VOTRE_CORRESPONDENT"</span>,  <span class="c-gray2">// ex: AIRTEL_GAB, MTN_MOMO_CMR</span>
-    msisdn: <span class="c-yellow">"NUMERO_BENEFICIAIRE"</span>,  <span class="c-gray2">// ex: "24166000000", "237600000000"</span>
-    description: <span class="c-green">"Remboursement client"</span>
+    correspondent: <span class="c-green">"AIRTEL_GAB"</span>,
+    msisdn: <span class="c-green">"24166000000"</span>,                <span class="c-gray2">// numéro du bénéficiaire, format international sans + ni espaces</span>
+    description: <span class="c-green">"Remboursement client"</span>   <span class="c-gray2">// facultatif : 4 à 22 caractères, lettres/chiffres/espaces uniquement</span>
   })
-});</pre>
+});
+<span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
+
+<span class="c-gray2">// Réponse 200</span>
+<span class="c-gray2">// { "success": true, "payoutId": "...", "status": "INITIATED", "message": "Virement initié. ..." }</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// Le payout est prélevé sur votre solde NDSGPay (collectes encaissées, moins les frais).</span>
+<span class="c-gray2">// Le montant PLUS les frais NDSGPay doivent tenir dans ce solde, sinon :</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Solde insuffisant. Maximum : 9708 XAF (frais NDSGPay inclus)" }</span>
+<span class="c-gray2">// 400  { "success": false, "error": "..." }   si l'opérateur refuse (ex : montant au-dessus de sa limite)</span></pre>
+            </div>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge get">GET</span>
+              <span class="endpoint-path">/api/deposits/:depositId</span>
+              <span class="endpoint-desc">Statut d'une collecte</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">`https://ndsgpay-backend.vercel.app/api/deposits/${depositId}`</span>, {
+  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${votre_sk_live_xxx}`</span> }
+});
+<span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
+
+<span class="c-gray2">// Réponse 200</span>
+<span class="c-gray2">// {</span>
+<span class="c-gray2">//   "success": true,</span>
+<span class="c-gray2">//   "deposit": {</span>
+<span class="c-gray2">//     "depositId": "b3f0c8e2-...",</span>
+<span class="c-gray2">//     "status": "COMPLETED",</span>
+<span class="c-gray2">//     "amount": 5000,</span>
+<span class="c-gray2">//     "currency": "XAF",</span>
+<span class="c-gray2">//     "correspondent": "AIRTEL_GAB",</span>
+<span class="c-gray2">//     "msisdn": "24177000000",</span>
+<span class="c-gray2">//     "description": "Commande 1042",</span>
+<span class="c-gray2">//     "failureCode": null,</span>
+<span class="c-gray2">//     "failureMessage": null</span>
+<span class="c-gray2">//     // ... autres champs</span>
+<span class="c-gray2">//   }</span>
+<span class="c-gray2">// }</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// status : INITIATED, SUBMITTED (en cours), puis COMPLETED ou FAILED (définitifs)</span>
+<span class="c-gray2">// 404  transaction introuvable          403  transaction d'un autre compte</span></pre>
+            </div>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge get">GET</span>
+              <span class="endpoint-path">/api/payouts/:payoutId</span>
+              <span class="endpoint-desc">Statut d'un payout</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">`https://ndsgpay-backend.vercel.app/api/payouts/${payoutId}`</span>, {
+  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${votre_sk_live_xxx}`</span> }
+});
+<span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
+
+<span class="c-gray2">// Réponse 200 : { "success": true, "payout": { "payoutId": "...", "status": "COMPLETED", "amount": 10000, ... } }</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// status : INITIATED, SUBMITTED, ACCEPTED, ENQUEUED (en cours), puis COMPLETED ou FAILED (définitifs)</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="api-section">
+          <div class="api-section-title">Webhooks (NDSGPay vers votre serveur)</div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge post">POST</span>
+              <span class="endpoint-path">votre URL webhook</span>
+              <span class="endpoint-desc">Notification de statut</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-gray2">// Renseignez votre URL dans Paramètres &gt; URL webhook.</span>
+<span class="c-gray2">// NDSGPay envoie un POST à chaque statut final (COMPLETED ou FAILED) :</span>
+{
+  <span class="c-green">"event"</span>: <span class="c-green">"deposit.updated"</span>,         <span class="c-gray2">// ou "payout.updated"</span>
+  <span class="c-green">"timestamp"</span>: <span class="c-green">"2026-10-11T10:15:00.000Z"</span>,
+  <span class="c-green">"data"</span>: {
+    <span class="c-green">"depositId"</span>: <span class="c-green">"b3f0c8e2-..."</span>,      <span class="c-gray2">// ou "payoutId" : l'identifiant renvoyé à la création</span>
+    <span class="c-green">"status"</span>: <span class="c-green">"COMPLETED"</span>             <span class="c-gray2">// ou "FAILED"</span>
+    <span class="c-gray2">// ... autres champs du message PawaPay : ne vous fiez qu'à l'identifiant et au statut</span>
+  }
+}
+
+<span class="c-gray2">// En-têtes envoyés :</span>
+<span class="c-gray2">// Content-Type: application/json</span>
+<span class="c-gray2">// X-NDSGPay-Event: deposit.updated</span>
+<span class="c-gray2">// X-NDSGPay-Merchant: &lt;votre identifiant marchand&gt;</span>
+<span class="c-gray2">// X-NDSGPay-Signature: t=1760177700,sha256=&lt;signature&gt;    (secret affiché dans Paramètres)</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// À savoir</span>
+<span class="c-gray2">// - Répondez en 2xx en moins de 5 secondes. NDSGPay n'essaie qu'une seule fois : il n'y a pas de nouvel envoi.</span>
+<span class="c-gray2">// - Ne vous reposez pas uniquement sur les webhooks : pour une transaction encore en cours après quelques</span>
+<span class="c-gray2">//   minutes, interrogez GET /api/deposits/:id (ou /api/payouts/:id).</span>
+<span class="c-gray2">// - Une transaction corrigée plus tard par la réconciliation automatique de NDSGPay n'émet pas de webhook.</span></pre>
             </div>
           </div>
 
           <div class="endpoint-card">
             <div class="endpoint-bar">
               <span class="method-badge post">POST</span>
-              <span class="endpoint-path">/api/webhooks/pawapay</span>
-              <span class="endpoint-desc">Callback de statut</span>
+              <span class="endpoint-path">votre URL webhook</span>
+              <span class="endpoint-desc">Vérifier la signature (Node.js)</span>
             </div>
             <div class="endpoint-body">
-              <pre><span class="c-gray2">// PawaPay envoie ce payload sur votre URL webhook</span>
-{
-  <span class="c-green">"depositId"</span>: <span class="c-yellow">"uuid-de-votre-transaction"</span>,
-  <span class="c-green">"status"</span>: <span class="c-yellow">"COMPLETED"</span>,   <span class="c-gray2">// ou FAILED</span>
-  <span class="c-green">"amount"</span>: <span class="c-yellow">"5000"</span>,
-  <span class="c-green">"currency"</span>: <span class="c-yellow">"XAF"</span>,
-  <span class="c-green">"correspondent"</span>: <span class="c-yellow">"VOTRE_CORRESPONDENT"</span>
-}</pre>
+              <pre><span class="c-purple">const</span> crypto = require(<span class="c-green">"crypto"</span>);
+<span class="c-purple">const</span> express = require(<span class="c-green">"express"</span>);
+<span class="c-purple">const</span> app = express();
+
+<span class="c-gray2">// Vérifie que le webhook vient bien de NDSGPay (secret : Paramètres &gt; Secret de signature webhook)</span>
+<span class="c-purple">function</span> verifierSignatureNdsgpay(corpsBrut, entete, secret, toleranceSec = 300) {
+  <span class="c-purple">const</span> parts = Object.fromEntries(entete.split(<span class="c-green">","</span>).map((p) =&gt; p.split(<span class="c-green">"="</span>)));
+  <span class="c-purple">const</span> t = parts.t;
+  <span class="c-purple">const</span> signature = parts.sha256;
+  <span class="c-purple">if</span> (!t || !signature) <span class="c-purple">return</span> false;
+  <span class="c-purple">if</span> (Math.abs(Date.now() / 1000 - Number(t)) &gt; toleranceSec) <span class="c-purple">return</span> false;   <span class="c-gray2">// anti-rejeu</span>
+  <span class="c-purple">const</span> attendu = crypto.createHmac(<span class="c-green">"sha256"</span>, secret).update(<span class="c-green">`${t}.${corpsBrut}`</span>).digest(<span class="c-green">"hex"</span>);
+  <span class="c-purple">const</span> a = Buffer.from(attendu);
+  <span class="c-purple">const</span> b = Buffer.from(signature);
+  <span class="c-purple">return</span> a.length === b.length &amp;&amp; crypto.timingSafeEqual(a, b);
+}
+
+<span class="c-gray2">// IMPORTANT : vérifiez sur le corps BRUT (le texte exact reçu), jamais sur un JSON ré-sérialisé</span>
+app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <span class="c-green">"application/json"</span> }), (req, res) =&gt; {
+  <span class="c-purple">const</span> corps = req.body.toString(<span class="c-green">"utf8"</span>);
+  <span class="c-purple">const</span> entete = req.headers[<span class="c-green">"x-ndsgpay-signature"</span>] || <span class="c-green">""</span>;
+  <span class="c-purple">if</span> (!verifierSignatureNdsgpay(corps, entete, process.env.NDSGPAY_WEBHOOK_SECRET)) {
+    <span class="c-purple">return</span> res.sendStatus(400);
+  }
+  <span class="c-purple">const</span> evenement = JSON.parse(corps);
+  <span class="c-gray2">// ... mettez à jour votre commande avec evenement.data.depositId (ou payoutId) et evenement.data.status</span>
+  res.sendStatus(200);
+});</pre>
             </div>
           </div>
         </div>
