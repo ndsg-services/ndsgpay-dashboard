@@ -1306,7 +1306,7 @@
     currency: <span class="c-green">"XAF"</span>,
     correspondent: <span class="c-green">"AIRTEL_GAB"</span>,  <span class="c-gray2">// code opérateur : AIRTEL_GAB, MTN_MOMO_CMR, MTN_MOMO_BEN...</span>
     msisdn: <span class="c-green">"24177000000"</span>,        <span class="c-gray2">// numéro du client, format international sans + ni espaces</span>
-    description: <span class="c-green">"Commande 1042"</span>  <span class="c-gray2">// facultatif : 4 à 22 caractères, lettres/chiffres/espaces uniquement</span>
+    description: <span class="c-green">"Commande 1042"</span>  <span class="c-gray2">// facultatif, vu par votre client : accents et symboles sont retirés, 22 caractères max</span>
   })
 });
 <span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
@@ -1320,7 +1320,9 @@
 <span class="c-gray2">// }</span>
 <span class="c-gray2">//</span>
 <span class="c-gray2">// Erreurs</span>
-<span class="c-gray2">// 400  { "success": false, "error": "Champs requis manquants : amount, correspondent, msisdn" }</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Champs requis manquants : msisdn" }          (liste les champs manquants)</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Corps de requête vide ou illisible. Envoyez du JSON avec l'en-tête Content-Type: application/json." }</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Montant invalide : indiquez un nombre positif, sans espace ni séparateur (ex : 5000)." }</span>
 <span class="c-gray2">// 400  { "success": false, "error": "Correspondant invalide : ..." }   ou refus de l'opérateur</span>
 <span class="c-gray2">// 401  clé API manquante ou invalide          403  compte non activé</span>
 <span class="c-gray2">// 429  trop de requêtes                       500  erreur à l'initiation (voir le champ "details")</span></pre>
@@ -1345,7 +1347,7 @@
     currency: <span class="c-green">"XAF"</span>,
     correspondent: <span class="c-green">"AIRTEL_GAB"</span>,
     msisdn: <span class="c-green">"24166000000"</span>,                <span class="c-gray2">// numéro du bénéficiaire, format international sans + ni espaces</span>
-    description: <span class="c-green">"Remboursement client"</span>   <span class="c-gray2">// facultatif : 4 à 22 caractères, lettres/chiffres/espaces uniquement</span>
+    description: <span class="c-green">"Remboursement client"</span>   <span class="c-gray2">// facultatif, vu par votre client : accents et symboles retirés, 22 car. max</span>
   })
 });
 <span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
