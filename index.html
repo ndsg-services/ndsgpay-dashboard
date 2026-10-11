@@ -852,7 +852,7 @@
         <div class="merchant-avatar">ND</div>
         <div>
           <div class="merchant-name">NDSG Services</div>
-          <div class="merchant-plan">Sandbox</div>
+          <div class="merchant-plan">En attente</div>
         </div>
       </div>
     </div>
@@ -865,7 +865,7 @@
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Vue d'<em>ensemble</em></div>
       <div class="topbar-right">
-        <span class="env-badge" id="env-badge">Sandbox</span>
+        <span class="env-badge" id="env-badge">En attente</span>
         <div class="dash-lang-toggle" id="dash-lang-toggle">
           <div class="dash-lang-opt active" id="dash-lang-fr" onclick="dashSetLang('fr')">FR</div>
           <div class="dash-lang-opt" id="dash-lang-en" onclick="dashSetLang('en')">EN</div>
@@ -888,11 +888,11 @@
         <div class="onboarding-banner">
           <div class="onboarding-icon">🚀</div>
           <div class="onboarding-text">
-            <div class="onboarding-title">Bienvenue sur NDSGPay — votre compte est en mode Sandbox</div>
-            <div class="onboarding-desc">Complétez les étapes ci-dessous pour passer en production et accepter de vrais paiements.</div>
+            <div class="onboarding-title">Bienvenue sur NDSGPay — votre compte est en attente d'activation</div>
+            <div class="onboarding-desc">Votre compte sera activé par l'équipe NDSG après vérification de votre dossier. L'API et les vrais paiements seront disponibles dès l'activation. En attendant, préparez votre intégration avec l'onglet Documentation.</div>
             <div class="onboarding-steps">
               <div class="o-step"><div class="o-step-num done">✓</div> Compte créé</div>
-              <div class="o-step"><div class="o-step-num done">✓</div> KYC validé</div>
+              <div class="o-step"><div class="o-step-num">2</div> Vérification du dossier (KYC) en cours</div>
               <div class="o-step"><div class="o-step-num">3</div> Intégration API</div>
               <div class="o-step"><div class="o-step-num">4</div> Go-live</div>
             </div>
@@ -1094,7 +1094,7 @@
         <div class="api-section">
           <div class="api-section-title">
             <span style="width:8px;height:8px;border-radius:50%;background:var(--warning);display:inline-block"></span>
-            <span id="api-env-label">Clés Sandbox</span>
+            <span id="api-env-label">Clés API</span>
           </div>
           <div class="api-key-card">
             <div class="api-key-row">
@@ -1662,6 +1662,7 @@ app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <
   }
 
   let jwtToken = sessionStorage.getItem('ndsgpay_jwt') || null;
+  let merchantIsActive = false;   // renseigné par loadApp()
   let currentMerchant = null;
 
   // ── GESTION SESSION EXPIRÉE ──────────────────────────────────
@@ -1840,7 +1841,8 @@ app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <
     if (merchant) {
       document.querySelector('.merchant-name').textContent = merchant.name || 'NDSGPay';
       document.querySelector('.merchant-avatar').textContent = (merchant.name || 'N')[0].toUpperCase();
-      document.querySelector('.merchant-plan').textContent = merchant.isActive ? 'Production' : 'Sandbox';
+      merchantIsActive = !!merchant.isActive;
+      document.querySelector('.merchant-plan').textContent = merchant.isActive ? 'Production' : 'En attente';
 
       // Masquer la bannière onboarding si le marchand est actif
       const onboardingBanner = document.querySelector('.onboarding-banner');
@@ -1854,7 +1856,7 @@ app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <
         badge.textContent = 'Production';
         badge.classList.add('prod');
       } else {
-        badge.textContent = 'Sandbox';
+        badge.textContent = 'En attente';
         badge.classList.remove('prod');
       }
 
@@ -1890,7 +1892,7 @@ app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <
           secEl._full = sk;
           secEl._revealed = false;
         }
-        if (prodLabel) prodLabel.textContent = merchant.isActive ? 'Clés Production' : 'Clés Sandbox';
+        if (prodLabel) prodLabel.textContent = merchant.isActive ? 'Clés Production' : 'Clés (actives après validation)';
       }
     }
 
@@ -2958,13 +2960,15 @@ app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <
     const badge = document.getElementById('env-badge');
     const sandboxBtn = document.getElementById('env-sandbox');
     const prodBtn = document.getElementById('env-prod');
+    // Seule l'activation par l'équipe NDSG donne accès à la production
+    if (env === 'prod' && !merchantIsActive) return;
     if (env === 'prod') {
       badge.textContent = 'Production';
       badge.classList.add('prod');
       prodBtn.classList.add('active');
       sandboxBtn.classList.remove('active');
     } else {
-      badge.textContent = 'Sandbox';
+      badge.textContent = merchantIsActive ? 'Sandbox' : 'En attente';
       badge.classList.remove('prod');
       sandboxBtn.classList.add('active');
       prodBtn.classList.remove('active');
