@@ -1058,12 +1058,12 @@
           <div class="kpi">
             <div class="kpi-label" data-i18n="kpi-collect">Collecte (total)</div>
             <div class="kpi-value" id="kpi-deposit-vol">0 XAF</div>
-            <div class="kpi-note">Frais : 3% / tx</div>
+            <div class="kpi-note" id="kpi-deposit-fee-note">Frais : selon votre accord</div>
           </div>
           <div class="kpi">
             <div class="kpi-label" data-i18n="kpi-payout">Payout (total)</div>
             <div class="kpi-value" id="kpi-payout-vol">0 XAF</div>
-            <div class="kpi-note">Frais : 2% / tx</div>
+            <div class="kpi-note" id="kpi-payout-fee-note">Frais : selon votre accord</div>
           </div>
           <div class="kpi">
             <div class="kpi-label" data-i18n="kpi-rate">Taux de succès</div>
@@ -2341,6 +2341,26 @@ app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <
   }
 
   // ── STATS ────────────────────────────────────────────────────
+  // Taux de frais affichés = les VRAIS taux du marchand par opérateur (négociés compris), jamais une valeur en dur
+  function formatRate(r) {
+    return Number((r * 100).toFixed(2)).toString().replace('.', ',') + ' %';
+  }
+  function feeNoteText(rates) {
+    const valid = [...new Set(rates
+      .filter((r) => typeof r === 'number' && isFinite(r))
+      .map((r) => Math.round(r * 10000) / 10000))].sort((a, b) => a - b);
+    if (valid.length === 0) return 'Frais : selon votre accord';
+    if (valid.length === 1) return `Frais : ${formatRate(valid[0])} / tx`;
+    return `Frais : de ${formatRate(valid[0])} à ${formatRate(valid[valid.length - 1])} / tx selon l'opérateur`;
+  }
+  function updateFeeNotes(balancesByCorrespondent) {
+    const ops = Object.values(balancesByCorrespondent || {});
+    const dep = document.getElementById('kpi-deposit-fee-note');
+    const pay = document.getElementById('kpi-payout-fee-note');
+    if (dep) dep.textContent = feeNoteText(ops.map((o) => o.effectiveDepositFee));
+    if (pay) pay.textContent = feeNoteText(ops.map((o) => o.effectivePayoutFee));
+  }
+
   async function loadStats() {
     if (!jwtToken) return;
     try {
@@ -2351,6 +2371,7 @@ app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <
       if (!data.success) return;
 
       const s = data.stats;
+      updateFeeNotes(s.balancesByCorrespondent);
 
       // KPIs overview — multi-currency
       const currencies = s.currencies || ['XAF'];
