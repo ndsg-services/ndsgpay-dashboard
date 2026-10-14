@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NDSGPay — Documentation API</title>
+  <meta name="description" content="Documentation de l'API NDSGPay : collectes et envois de fonds mobile money, statuts, webhooks signés." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+      --cream: #F0EDE6;
+      --cream-dark: #E8E4DC;
+      --cream-darker: #DDD8CF;
+      --blue: #1A5FB4;
+      --blue-dark: #144d96;
+      --blue-light: #EAF1FB;
+      --blue-mid: #C5D9F5;
+      --text: #1a1a18;
+      --text-mid: #3a3a36;
+      --text-muted: #6b6b65;
+      --border: rgba(26,26,24,0.1);
+      --border-strong: rgba(26,26,24,0.18);
+      --success: #1a7a3c;
+      --success-bg: #eaf5ef;
+      --danger: #c0392b;
+      --danger-bg: #fdf0ee;
+      --warning: #92600a;
+      --warning-bg: #fdf5e6;
+      --serif: 'Playfair Display', Georgia, serif;
+      --sans: 'DM Sans', sans-serif;
+      --mono: 'DM Mono', monospace;
+      --sidebar-w: 240px;
+      --header-h: 60px;
+    }
+html { scroll-behavior: smooth; }
+body {
+      font-family: var(--sans);
+      background: var(--cream);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+.api-section { margin-bottom: 28px; }
+.api-section-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+.endpoint-card {
+      background: #1a1a18;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+.endpoint-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+.method-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+.method-badge.post { background: rgba(26,122,60,0.3); color: #6ee7a0; }
+.method-badge.get { background: rgba(26,95,180,0.3); color: #89b4fa; }
+.endpoint-path { font-family: var(--mono); font-size: 12px; color: #cdd6f4; }
+.endpoint-desc { font-size: 11px; color: #6c7086; margin-left: auto; }
+.endpoint-body {
+      padding: 14px 16px;
+    }
+.endpoint-body pre {
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.7;
+      color: #cdd6f4;
+      white-space: pre;
+      overflow-x: auto;
+    }
+.c-purple { color: #cba6f7; }
+.c-green { color: #a6e3a1; }
+.c-yellow { color: #f9e2af; }
+.c-blue2 { color: #89b4fa; }
+.c-gray2 { color: #6c7086; }
+@media (max-width: 600px) {
+body { overflow-y: auto !important; }
+}
+
+.docs-header { background: var(--white, #fff); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }
+.docs-logo { font-family: var(--serif); font-size: 22px; color: var(--text); text-decoration: none; }
+.docs-logo span { color: var(--blue); }
+.docs-title { color: var(--text-muted); font-size: 14px; flex: 1; }
+.docs-cta { background: var(--blue); color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+.docs-main { max-width: 920px; margin: 0 auto; padding: 32px 20px 60px; }
+.docs-main h1 { font-family: var(--serif); font-weight: 500; font-size: 30px; margin-bottom: 8px; }
+.docs-intro { color: var(--text-mid); margin-bottom: 28px; max-width: 680px; }
+.docs-footer { border-top: 1px solid var(--border); padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.docs-footer a { color: var(--blue); }
+.api-section { margin-bottom: 28px; }
+  </style>
+</head>
+<body>
+
+<header class="docs-header">
+  <a class="docs-logo" href="/">NDSG<span>Pay</span></a>
+  <span class="docs-title">Documentation API</span>
+  <a class="docs-cta" href="/">Se connecter / Créer un compte</a>
+</header>
+
+<main class="docs-main">
+  <h1>Documentation API NDSGPay</h1>
+  <p class="docs-intro">Encaissez des paiements mobile money et envoyez des fonds par une API REST en JSON. Créez un compte pour obtenir vos clés API ; l'accès aux paiements réels est activé après vérification de votre dossier par notre équipe.</p>
+
+
+        <div class="api-section">
+          <div class="api-section-title">Base URL</div>
+          <div class="endpoint-card">
+            <div class="endpoint-body">
+              <pre><span class="c-gray2"># Production NDSGPay</span>
+<span class="c-green">https://ndsgpay-backend.vercel.app/api</span>
+
+<span class="c-gray2"># Authentification : utilisez votre clé secrète NDSGPay (sk_live_)</span>
+<span class="c-gray2"># NE PAS utiliser un token PawaPay — NDSGPay gère PawaPay pour vous</span>
+<span class="c-gray2"># Les requêtes POST doivent envoyer l'en-tête Content-Type: application/json</span>
+<span class="c-gray2"># Limites par clé API : 60 créations de paiement/min, 120 consultations/min (HTTP 429 au-delà)</span>
+<span class="c-gray2"># Opérateurs : contactez support@ndsgservices.com pour la liste activée sur votre compte</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="api-section">
+          <div class="api-section-title">Endpoints</div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge post">POST</span>
+              <span class="endpoint-path">/api/pay/deposits</span>
+              <span class="endpoint-desc">Initier une collecte</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://ndsgpay-backend.vercel.app/api/pay/deposits"</span>, {
+  method: <span class="c-green">"POST"</span>,
+  headers: {
+    <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${votre_sk_live_xxx}`</span>,
+    <span class="c-green">"Content-Type"</span>: <span class="c-green">"application/json"</span>
+  },
+  <span class="c-gray2">// Pas de depositId à envoyer : NDSGPay génère l'identifiant et vous le renvoie.</span>
+  body: JSON.stringify({
+    amount: <span class="c-green">"5000"</span>,               <span class="c-gray2">// en XAF</span>
+    currency: <span class="c-green">"XAF"</span>,
+    correspondent: <span class="c-green">"AIRTEL_GAB"</span>,  <span class="c-gray2">// code opérateur : AIRTEL_GAB, MTN_MOMO_CMR, MTN_MOMO_BEN...</span>
+    msisdn: <span class="c-green">"24177000000"</span>,        <span class="c-gray2">// numéro du client, format international sans + ni espaces</span>
+    description: <span class="c-green">"Commande 1042"</span>  <span class="c-gray2">// facultatif, vu par votre client : accents et symboles sont retirés, 22 caractères max</span>
+  })
+});
+<span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
+
+<span class="c-gray2">// Réponse 200</span>
+<span class="c-gray2">// {</span>
+<span class="c-gray2">//   "success": true,</span>
+<span class="c-gray2">//   "depositId": "b3f0c8e2-...",  // généré par NDSGPay : conservez-le pour suivre la transaction</span>
+<span class="c-gray2">//   "status": "INITIATED",</span>
+<span class="c-gray2">//   "message": "Paiement initié. Le client va recevoir une demande de confirmation sur son téléphone."</span>
+<span class="c-gray2">// }</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// Erreurs</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Champs requis manquants : msisdn" }          (liste les champs manquants)</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Corps de requête vide ou illisible. Envoyez du JSON avec l'en-tête Content-Type: application/json." }</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Montant invalide : indiquez un nombre positif, sans espace ni séparateur (ex : 5000)." }</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Correspondant invalide : ..." }   ou refus de l'opérateur</span>
+<span class="c-gray2">// 401  clé API manquante ou invalide          403  compte non activé</span>
+<span class="c-gray2">// 429  trop de requêtes                       500  erreur à l'initiation (voir le champ "details")</span></pre>
+            </div>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge post">POST</span>
+              <span class="endpoint-path">/api/pay/payouts</span>
+              <span class="endpoint-desc">Envoyer des fonds</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">"https://ndsgpay-backend.vercel.app/api/pay/payouts"</span>, {
+  method: <span class="c-green">"POST"</span>,
+  headers: {
+    <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${votre_sk_live_xxx}`</span>,
+    <span class="c-green">"Content-Type"</span>: <span class="c-green">"application/json"</span>
+  },
+  body: JSON.stringify({
+    amount: <span class="c-green">"10000"</span>,
+    currency: <span class="c-green">"XAF"</span>,
+    correspondent: <span class="c-green">"AIRTEL_GAB"</span>,
+    msisdn: <span class="c-green">"24166000000"</span>,                <span class="c-gray2">// numéro du bénéficiaire, format international sans + ni espaces</span>
+    description: <span class="c-green">"Remboursement client"</span>   <span class="c-gray2">// facultatif, vu par votre client : accents et symboles retirés, 22 car. max</span>
+  })
+});
+<span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
+
+<span class="c-gray2">// Réponse 200</span>
+<span class="c-gray2">// { "success": true, "payoutId": "...", "status": "INITIATED", "message": "Virement initié. ..." }</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// Le payout est prélevé sur votre solde NDSGPay (collectes encaissées, moins les frais).</span>
+<span class="c-gray2">// Le montant PLUS les frais NDSGPay doivent tenir dans ce solde, sinon :</span>
+<span class="c-gray2">// 400  { "success": false, "error": "Solde insuffisant. Maximum : 9708 XAF (frais NDSGPay inclus)" }</span>
+<span class="c-gray2">// 400  { "success": false, "error": "..." }   si l'opérateur refuse (ex : montant au-dessus de sa limite)</span></pre>
+            </div>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge get">GET</span>
+              <span class="endpoint-path">/api/deposits/:depositId</span>
+              <span class="endpoint-desc">Statut d'une collecte</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">`https://ndsgpay-backend.vercel.app/api/deposits/${depositId}`</span>, {
+  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${votre_sk_live_xxx}`</span> }
+});
+<span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
+
+<span class="c-gray2">// Réponse 200</span>
+<span class="c-gray2">// {</span>
+<span class="c-gray2">//   "success": true,</span>
+<span class="c-gray2">//   "deposit": {</span>
+<span class="c-gray2">//     "depositId": "b3f0c8e2-...",</span>
+<span class="c-gray2">//     "status": "COMPLETED",</span>
+<span class="c-gray2">//     "amount": 5000,</span>
+<span class="c-gray2">//     "currency": "XAF",</span>
+<span class="c-gray2">//     "correspondent": "AIRTEL_GAB",</span>
+<span class="c-gray2">//     "msisdn": "24177000000",</span>
+<span class="c-gray2">//     "description": "Commande 1042",</span>
+<span class="c-gray2">//     "failureCode": null,</span>
+<span class="c-gray2">//     "failureMessage": null</span>
+<span class="c-gray2">//     // ... autres champs</span>
+<span class="c-gray2">//   }</span>
+<span class="c-gray2">// }</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// status : INITIATED, SUBMITTED (en cours), puis COMPLETED ou FAILED (définitifs)</span>
+<span class="c-gray2">// 404  transaction introuvable          403  transaction d'un autre compte</span></pre>
+            </div>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge get">GET</span>
+              <span class="endpoint-path">/api/payouts/:payoutId</span>
+              <span class="endpoint-desc">Statut d'un payout</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-purple">const</span> res = <span class="c-purple">await</span> fetch(<span class="c-green">`https://ndsgpay-backend.vercel.app/api/payouts/${payoutId}`</span>, {
+  headers: { <span class="c-green">"Authorization"</span>: <span class="c-green">`Bearer ${votre_sk_live_xxx}`</span> }
+});
+<span class="c-purple">const</span> data = <span class="c-purple">await</span> res.json();
+
+<span class="c-gray2">// Réponse 200 : { "success": true, "payout": { "payoutId": "...", "status": "COMPLETED", "amount": 10000, ... } }</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// status : INITIATED, SUBMITTED, ACCEPTED, ENQUEUED (en cours), puis COMPLETED ou FAILED (définitifs)</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="api-section">
+          <div class="api-section-title">Webhooks (NDSGPay vers votre serveur)</div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge post">POST</span>
+              <span class="endpoint-path">votre URL webhook</span>
+              <span class="endpoint-desc">Notification de statut</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-gray2">// Renseignez votre URL dans Paramètres &gt; URL webhook.</span>
+<span class="c-gray2">// NDSGPay envoie un POST à chaque statut final (COMPLETED ou FAILED) :</span>
+{
+  <span class="c-green">"event"</span>: <span class="c-green">"deposit.updated"</span>,         <span class="c-gray2">// ou "payout.updated"</span>
+  <span class="c-green">"timestamp"</span>: <span class="c-green">"2026-10-11T10:15:00.000Z"</span>,
+  <span class="c-green">"data"</span>: {
+    <span class="c-green">"depositId"</span>: <span class="c-green">"b3f0c8e2-..."</span>,      <span class="c-gray2">// ou "payoutId" : l'identifiant renvoyé à la création</span>
+    <span class="c-green">"status"</span>: <span class="c-green">"COMPLETED"</span>             <span class="c-gray2">// ou "FAILED"</span>
+    <span class="c-gray2">// ... autres champs du message PawaPay : ne vous fiez qu'à l'identifiant et au statut</span>
+  }
+}
+
+<span class="c-gray2">// En-têtes envoyés :</span>
+<span class="c-gray2">// Content-Type: application/json</span>
+<span class="c-gray2">// X-NDSGPay-Event: deposit.updated</span>
+<span class="c-gray2">// X-NDSGPay-Merchant: &lt;votre identifiant marchand&gt;</span>
+<span class="c-gray2">// X-NDSGPay-Signature: t=1760177700,sha256=&lt;signature&gt;    (secret affiché dans Paramètres)</span>
+<span class="c-gray2">//</span>
+<span class="c-gray2">// À savoir</span>
+<span class="c-gray2">// - Répondez en 2xx en moins de 5 secondes. NDSGPay n'essaie qu'une seule fois : il n'y a pas de nouvel envoi.</span>
+<span class="c-gray2">// - Ne vous reposez pas uniquement sur les webhooks : pour une transaction encore en cours après quelques</span>
+<span class="c-gray2">//   minutes, interrogez GET /api/deposits/:id (ou /api/payouts/:id).</span>
+<span class="c-gray2">// - Une transaction corrigée plus tard par la réconciliation automatique de NDSGPay n'émet pas de webhook.</span></pre>
+            </div>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-bar">
+              <span class="method-badge post">POST</span>
+              <span class="endpoint-path">votre URL webhook</span>
+              <span class="endpoint-desc">Vérifier la signature (Node.js)</span>
+            </div>
+            <div class="endpoint-body">
+              <pre><span class="c-purple">const</span> crypto = require(<span class="c-green">"crypto"</span>);
+<span class="c-purple">const</span> express = require(<span class="c-green">"express"</span>);
+<span class="c-purple">const</span> app = express();
+
+<span class="c-gray2">// Vérifie que le webhook vient bien de NDSGPay (secret : Paramètres &gt; Secret de signature webhook)</span>
+<span class="c-purple">function</span> verifierSignatureNdsgpay(corpsBrut, entete, secret, toleranceSec = 300) {
+  <span class="c-purple">const</span> parts = Object.fromEntries(entete.split(<span class="c-green">","</span>).map((p) =&gt; p.split(<span class="c-green">"="</span>)));
+  <span class="c-purple">const</span> t = parts.t;
+  <span class="c-purple">const</span> signature = parts.sha256;
+  <span class="c-purple">if</span> (!t || !signature) <span class="c-purple">return</span> false;
+  <span class="c-purple">if</span> (Math.abs(Date.now() / 1000 - Number(t)) &gt; toleranceSec) <span class="c-purple">return</span> false;   <span class="c-gray2">// anti-rejeu</span>
+  <span class="c-purple">const</span> attendu = crypto.createHmac(<span class="c-green">"sha256"</span>, secret).update(<span class="c-green">`${t}.${corpsBrut}`</span>).digest(<span class="c-green">"hex"</span>);
+  <span class="c-purple">const</span> a = Buffer.from(attendu);
+  <span class="c-purple">const</span> b = Buffer.from(signature);
+  <span class="c-purple">return</span> a.length === b.length &amp;&amp; crypto.timingSafeEqual(a, b);
+}
+
+<span class="c-gray2">// IMPORTANT : vérifiez sur le corps BRUT (le texte exact reçu), jamais sur un JSON ré-sérialisé</span>
+app.post(<span class="c-green">"/webhooks/ndsgpay"</span>, express.raw({ type: <span class="c-green">"application/json"</span> }), (req, res) =&gt; {
+  <span class="c-purple">const</span> corps = req.body.toString(<span class="c-green">"utf8"</span>);
+  <span class="c-purple">const</span> entete = req.headers[<span class="c-green">"x-ndsgpay-signature"</span>] || <span class="c-green">""</span>;
+  <span class="c-purple">if</span> (!verifierSignatureNdsgpay(corps, entete, process.env.NDSGPAY_WEBHOOK_SECRET)) {
+    <span class="c-purple">return</span> res.sendStatus(400);
+  }
+  <span class="c-purple">const</span> evenement = JSON.parse(corps);
+  <span class="c-gray2">// ... mettez à jour votre commande avec evenement.data.depositId (ou payoutId) et evenement.data.status</span>
+  res.sendStatus(200);
+});</pre>
+            </div>
+          </div>
+        </div>
+</main>
+
+<footer class="docs-footer">Une question ? <a href="mailto:support@ndsgservices.com">support@ndsgservices.com</a></footer>
+
+</body>
+</html>
