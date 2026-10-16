@@ -164,6 +164,7 @@
       <button class="tab-btn" id="tab-balances" onclick="switchTab('balances')">💰 Soldes</button>
       <button class="tab-btn" id="tab-operators" onclick="switchTab('operators')">📡 Opérateurs</button>
       <button class="tab-btn" id="tab-reconcile" onclick="switchTab('reconcile')">🔄 Réconciliation</button>
+      <button class="tab-btn" id="tab-webhooks" onclick="switchTab('webhooks')">🔔 Webhooks</button>
       <button class="tab-btn" id="tab-audit" onclick="switchTab('audit')">🔍 Audit</button>
     </div>
 
@@ -398,6 +399,7 @@
     document.getElementById('panel-operators').style.display    = tab === 'operators'    ? 'block' : 'none';
     document.getElementById('panel-reconcile').style.display   = tab === 'reconcile'   ? 'block' : 'none';
     document.getElementById('panel-audit').style.display       = tab === 'audit'       ? 'block' : 'none';
+    document.getElementById('panel-webhooks').style.display    = tab === 'webhooks'    ? 'block' : 'none';
     document.getElementById('tab-merchants').classList.toggle('active',    tab === 'merchants');
     document.getElementById('tab-transactions').classList.toggle('active', tab === 'transactions');
     document.getElementById('tab-withdrawals').classList.toggle('active',  tab === 'withdrawals');
@@ -405,8 +407,10 @@
     document.getElementById('tab-operators').classList.toggle('active',    tab === 'operators');
     document.getElementById('tab-reconcile').classList.toggle('active',   tab === 'reconcile');
     document.getElementById('tab-audit').classList.toggle('active',       tab === 'audit');
+    document.getElementById('tab-webhooks').classList.toggle('active',    tab === 'webhooks');
     if (tab === 'reconcile') loadReconciliationLogs();
     if (tab === 'audit') loadAuditLogs();
+    if (tab === 'webhooks') loadWebhookDeliveries(1);
     if (tab === 'transactions') {
       const s = document.getElementById('tx-search');
       if (s) s.value = '';
@@ -1184,6 +1188,109 @@
     }
   }
 
+  // ── WEBHOOKS ─────────────────────────────────────────────────
+  // Journal des envois de webhooks vers les marchands (observation : le détail vient de leur serveur)
+  let whPage = 1;
+  const WH_OUTCOMES = {
+    SUCCESS:       { label: 'Reçu',          color: '#16a34a', bg: '#f0fdf4' },
+    HTTP_ERROR:    { label: 'Erreur HTTP',   color: '#dc2626', bg: '#fef2f2' },
+    TIMEOUT:       { label: 'Délai dépassé', color: '#d97706', bg: '#fffbeb' },
+    NETWORK_ERROR: { label: 'Injoignable',   color: '#dc2626', bg: '#fef2f2' },
+    NO_URL:        { label: 'Aucune URL',    color: '#64748b', bg: '#f1f5f9' },
+  };
+
+  // Tout texte venant d'un serveur marchand est échappé avant affichage
+  function escWh(str) {
+    return String(str === undefined || str === null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function fillWebhookMerchantFilter() {
+    const sel = document.getElementById('wh-merchant');
+    if (!sel) return;
+    const key = String((allMerchants || []).length);
+    if (sel.dataset.filled === key) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Tous les marchands</option>' +
+      (allMerchants || []).map(m => `<option value="${escWh(m.id)}">${escWh(m.name)}</option>`).join('');
+    sel.value = current;
+    sel.dataset.filled = key;
+  }
+
+  function renderWebhookSummary(last24h) {
+    const el = document.getElementById('wh-summary');
+    if (!el) return;
+    if (!last24h) { el.textContent = ''; return; }
+    const c = last24h.counts || {};
+    const failed = (c.HTTP_ERROR || 0) + (c.TIMEOUT || 0) + (c.NETWORK_ERROR || 0);
+    if (!last24h.attempted && !c.NO_URL) { el.textContent = 'Aucun envoi dans les dernières 24 h.'; return; }
+    const rate = last24h.successRate;
+    const color = rate === null ? 'var(--muted)' : rate >= 95 ? '#16a34a' : rate >= 80 ? '#d97706' : '#dc2626';
+    el.innerHTML = `Dernières 24 h : <strong>${last24h.attempted}</strong> envoi(s) tenté(s), ` +
+      `<strong>${c.SUCCESS || 0}</strong> reçu(s)` +
+      (rate !== null ? ` — <strong style="color:${color}">${String(rate).replace('.', ',')} %</strong> de réussite` : '') +
+      (failed ? `, <strong style="color:#dc2626">${failed}</strong> en erreur` : '') +
+      (c.NO_URL ? `, ${c.NO_URL} sans adresse configurée` : '') + '.';
+  }
+
+  async function loadWebhookDeliveries(page) {
+    whPage = typeof page === 'number' ? page : 1;
+    fillWebhookMerchantFilter();
+    const body = document.getElementById('wh-body');
+    if (!body) return;
+    const merchantId = document.getElementById('wh-merchant').value;
+    const outcome = document.getElementById('wh-outcome').value;
+    const qs = new URLSearchParams({ limit: '50', page: String(whPage) });
+    if (merchantId) qs.set('merchantId', merchantId);
+    if (outcome) qs.set('outcome', outcome);
+    body.innerHTML = '<div style="color:var(--muted);padding:20px">Chargement...</div>';
+    try {
+      const res = await fetch(`${API}/admin/webhook-deliveries?${qs}`, { headers: { 'x-admin-key': adminKey } });
+      const data = await res.json();
+      if (!data.success) {
+        body.innerHTML = '<div style="color:var(--danger);padding:20px">Erreur de chargement</div>';
+        return;
+      }
+      renderWebhookSummary(data.last24h);
+      if (!data.deliveries.length) {
+        body.innerHTML = '<div style="color:var(--muted);padding:20px">Aucun envoi enregistré pour ces filtres.</div>';
+        return;
+      }
+      const th = 'text-align:left;padding:10px 16px;font-size:11px;color:var(--muted);font-weight:500';
+      const td = 'padding:10px 16px;font-size:12px';
+      const rows = data.deliveries.map(d => {
+        const o = WH_OUTCOMES[d.outcome] || { label: d.outcome, color: '#64748b', bg: '#f8fafc' };
+        const dt = new Date(d.createdAt);
+        const date = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const tx = d.transactionId ? `<span title="${escWh(d.transactionId)}" style="font-family:monospace">${escWh(String(d.transactionId).slice(0, 8))}…</span>` : '—';
+        return `<tr>
+          <td style="${td};color:var(--muted);white-space:nowrap">${escWh(date)}</td>
+          <td style="${td};font-weight:500">${escWh(d.merchantName || '—')}</td>
+          <td style="${td}">${escWh(d.event)}<div style="color:var(--muted)">${escWh(d.transactionStatus || '')}</div></td>
+          <td style="${td}">${tx}</td>
+          <td style="${td}"><span title="${escWh(d.url || '')}" style="background:${o.bg};color:${o.color};font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap">${escWh(o.label)}</span></td>
+          <td style="${td}">${d.httpStatus !== null && d.httpStatus !== undefined ? escWh(d.httpStatus) : '—'}</td>
+          <td style="${td};white-space:nowrap">${d.durationMs !== null && d.durationMs !== undefined ? escWh(d.durationMs) + ' ms' : '—'}</td>
+          <td style="${td};color:var(--muted)">${escWh(d.detail || '')}</td>
+        </tr>`;
+      }).join('');
+      const pages = Math.max(1, Math.ceil(data.total / 50));
+      const pager = pages > 1 ? `<div style="display:flex;gap:10px;align-items:center;padding:12px 16px;font-size:12px">
+          <button ${whPage <= 1 ? 'disabled' : ''} onclick="loadWebhookDeliveries(${whPage - 1})" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer">‹ Précédent</button>
+          <span>Page ${whPage} / ${pages} (${data.total} envois)</span>
+          <button ${whPage >= pages ? 'disabled' : ''} onclick="loadWebhookDeliveries(${whPage + 1})" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer">Suivant ›</button>
+        </div>` : '';
+      body.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f8fafc">
+          <th style="${th}">Date</th><th style="${th}">Marchand</th><th style="${th}">Événement</th><th style="${th}">Transaction</th>
+          <th style="${th}">Résultat</th><th style="${th}">HTTP</th><th style="${th}">Durée</th><th style="${th}">Détail</th>
+        </tr></thead><tbody>${rows}</tbody></table></div>${pager}`;
+    } catch (e) {
+      body.innerHTML = '<div style="color:var(--danger);padding:20px">Erreur de chargement</div>';
+    }
+  }
+
   async function loadAuditLogs() {
     const body = document.getElementById('audit-logs-body');
     if (!body) return;
@@ -1459,6 +1566,30 @@
 </script>
 
     <!-- PANEL RECONCILIATION -->
+    <div id="panel-webhooks" style="display:none">
+      <div class="table-card">
+        <div class="table-header" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="table-title">🔔 Journal des webhooks</div>
+          <select id="wh-merchant" onchange="loadWebhookDeliveries()" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);font-size:12px">
+            <option value="">Tous les marchands</option>
+          </select>
+          <select id="wh-outcome" onchange="loadWebhookDeliveries()" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);font-size:12px">
+            <option value="">Tous les résultats</option>
+            <option value="SUCCESS">Reçus</option>
+            <option value="HTTP_ERROR">Erreur HTTP</option>
+            <option value="TIMEOUT">Délai dépassé</option>
+            <option value="NETWORK_ERROR">Injoignable</option>
+            <option value="NO_URL">Aucune URL</option>
+          </select>
+          <button onclick="loadWebhookDeliveries()" style="padding:5px 12px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:11px;font-weight:500;cursor:pointer">↻ Actualiser</button>
+        </div>
+        <div id="wh-summary" style="padding:10px 16px;font-size:12px;color:var(--muted)"></div>
+        <div id="wh-body" style="min-height:100px">
+          <div style="color:var(--muted);padding:20px">Chargement...</div>
+        </div>
+      </div>
+    </div>
+
     <div id="panel-audit" style="display:none">
       <div class="table-card">
         <div class="table-header">

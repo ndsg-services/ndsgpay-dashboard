@@ -1358,6 +1358,16 @@
           </div>
         </div>
 
+        <div class="api-key-card" style="margin-top:16px" id="webhook-log-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:500;color:var(--text)">Journal des webhooks</div>
+            <button class="btn-sm" onclick="loadWebhookLog()">↻ Actualiser</button>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Vos 50 derniers envois de notifications de paiement. Votre serveur doit répondre en 2xx en moins de 5 secondes ; NDSGPay n'essaie qu'une seule fois.</div>
+          <div id="webhook-log-summary" style="font-size:12px;margin-bottom:10px"></div>
+          <div id="webhook-log-body" style="overflow-x:auto"><div style="color:var(--text-muted);font-size:13px">Chargement...</div></div>
+        </div>
+
     </div><!-- /content -->
   </main>
 </div><!-- /app -->
@@ -1493,7 +1503,7 @@
     if (name === 'retrait') loadRetraitPanel();
     if (name === 'team') loadTeam();
     if (name === 'poskeys') loadPosKeys();
-    if (name === 'settings') loadSettingsPanel();
+    if (name === 'settings') { loadSettingsPanel(); loadWebhookLog(); }
   }
 
   function loadApp(data) {
@@ -1739,6 +1749,75 @@
   });
 
   // ── SETTINGS ─────────────────────────────────────────────────
+  // ── JOURNAL DES WEBHOOKS ─────────────────────────────────────
+  const WEBHOOK_OUTCOMES = {
+    SUCCESS:       { label: 'Reçu',           color: '#16a34a', bg: '#f0fdf4' },
+    HTTP_ERROR:    { label: 'Erreur',         color: '#dc2626', bg: '#fef2f2' },
+    TIMEOUT:       { label: 'Délai dépassé',  color: '#d97706', bg: '#fffbeb' },
+    NETWORK_ERROR: { label: 'Injoignable',    color: '#dc2626', bg: '#fef2f2' },
+    NO_URL:        { label: 'Aucune adresse', color: '#64748b', bg: '#f1f5f9' },
+  };
+
+  // Explication en clair de ce qui s'est passé (le détail vient du serveur du marchand : échappé à l'affichage)
+  function webhookExplain(d) {
+    switch (d.outcome) {
+      case 'SUCCESS': return `Votre serveur a répondu ${d.httpStatus}`;
+      case 'HTTP_ERROR': return `Votre serveur a répondu ${d.httpStatus}` + (d.detail ? ` : « ${d.detail} »` : '');
+      case 'TIMEOUT': return 'Pas de réponse en 5 secondes';
+      case 'NETWORK_ERROR': return 'Impossible de joindre votre serveur' + (d.detail ? ` (${d.detail})` : '');
+      case 'NO_URL': return 'Aucune URL webhook configurée : rien n\'a été envoyé';
+      default: return d.detail || '';
+    }
+  }
+
+  async function loadWebhookLog() {
+    const body = document.getElementById('webhook-log-body');
+    const summary = document.getElementById('webhook-log-summary');
+    if (!body || !jwtToken) return;
+    try {
+      const res = await apiFetch(`${API}/merchant/webhook-deliveries?limit=50`, {
+        headers: { 'Authorization': `Bearer ${jwtToken}` }
+      });
+      const data = await res.json();
+      if (!data.success) { body.innerHTML = '<div style="color:var(--danger);font-size:13px">Impossible de charger le journal.</div>'; return; }
+
+      const c = (data.last24h && data.last24h.counts) || {};
+      const att = (data.last24h && data.last24h.attempted) || 0;
+      const rate = data.last24h ? data.last24h.successRate : null;
+      if (summary) {
+        summary.innerHTML = (!att && !c.NO_URL)
+          ? 'Aucun envoi dans les dernières 24 h.'
+          : `Dernières 24 h : <strong>${escapeHtml(String(att))}</strong> envoi(s) tenté(s), <strong>${escapeHtml(String(c.SUCCESS || 0))}</strong> reçu(s)` +
+            (rate !== null && rate !== undefined ? ` (${escapeHtml(String(rate).replace('.', ','))} %)` : '') +
+            (c.NO_URL ? ` — ${escapeHtml(String(c.NO_URL))} paiement(s) sans adresse webhook configurée` : '') + '.';
+      }
+
+      if (!data.deliveries.length) {
+        body.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Aucun envoi pour l\'instant. Un envoi apparaît ici dès qu\'un paiement se termine.</div>';
+        return;
+      }
+      const th = 'text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);font-weight:500;white-space:nowrap';
+      const td = 'padding:8px 10px;font-size:12px;vertical-align:top';
+      const rows = data.deliveries.map(d => {
+        const o = WEBHOOK_OUTCOMES[d.outcome] || { label: d.outcome, color: '#64748b', bg: '#f8fafc' };
+        const dt = new Date(d.createdAt);
+        const date = dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const tx = d.transactionId ? `<span title="${escapeHtml(d.transactionId)}" style="font-family:monospace">${escapeHtml(String(d.transactionId).slice(0, 8))}…</span>` : '—';
+        return `<tr>
+          <td style="${td};white-space:nowrap;color:var(--text-muted)">${escapeHtml(date)}</td>
+          <td style="${td}">${tx}<div style="color:var(--text-muted)">${escapeHtml(d.transactionStatus || '')}</div></td>
+          <td style="${td}"><span style="background:${o.bg};color:${o.color};font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap">${escapeHtml(o.label)}</span></td>
+          <td style="${td}">${escapeHtml(webhookExplain(d))}${d.durationMs !== null && d.durationMs !== undefined ? ` <span style="color:var(--text-muted)">· ${escapeHtml(String(d.durationMs))} ms</span>` : ''}</td>
+        </tr>`;
+      }).join('');
+      body.innerHTML = `<table style="width:100%;border-collapse:collapse">
+        <thead><tr><th style="${th}">Date</th><th style="${th}">Paiement</th><th style="${th}">Résultat</th><th style="${th}">Détail</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    } catch (e) {
+      body.innerHTML = '<div style="color:var(--danger);font-size:13px">Impossible de charger le journal.</div>';
+    }
+  }
+
   async function loadSettingsPanel() {
     try {
       const res = await apiFetch(`${API}/merchant/settings`, {
