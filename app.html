@@ -1361,10 +1361,14 @@
         <div class="api-key-card" style="margin-top:16px" id="webhook-log-card">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px">
             <div style="font-size:13px;font-weight:500;color:var(--text)">Journal des webhooks</div>
-            <button class="btn-sm" onclick="loadWebhookLog()">↻ Actualiser</button>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="webhook-log-updated" style="font-size:11px;color:var(--text-muted)"></span>
+              <button class="btn-sm" id="wh-refresh-btn" onclick="loadWebhookLog()">↻ Actualiser</button>
+            </div>
           </div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Vos 50 derniers envois de notifications de paiement. Votre serveur doit répondre en 2xx en moins de 5 secondes ; NDSGPay n'essaie qu'une seule fois.</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Vos 50 derniers envois de notifications de paiement. Votre serveur doit répondre en 2xx en moins de 5 secondes. En cas d'échec, NDSGPay renvoie automatiquement (après 5 min, 15 min, 1 h puis 6 h, 5 envois au maximum) ; vous pouvez aussi renvoyer à la main. Un même événement peut donc arriver plusieurs fois : traitez-le une seule fois.</div>
           <div id="webhook-log-summary" style="font-size:12px;margin-bottom:10px"></div>
+          <div id="webhook-log-status" role="status" aria-live="polite" style="font-size:12px;margin-bottom:10px"></div>
           <div id="webhook-log-body" style="overflow-x:auto"><div style="color:var(--text-muted);font-size:13px">Chargement...</div></div>
         </div>
 
@@ -1770,16 +1774,38 @@
     }
   }
 
+  // Seules les personnes autorisées à gérer le compte peuvent renvoyer (le serveur le contrôle aussi)
+  function canResendWebhooks() {
+    try { return ['MERCHANT_OWNER', 'MERCHANT_ADMIN', 'MERCHANT'].includes((JSON.parse(sessionStorage.getItem('ndsgpay_user') || '{}')).role); }
+    catch (_) { return false; }
+  }
+  function webhookClock(date) {
+    const t = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return date.toDateString() === new Date().toDateString() ? t : date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + t;
+  }
+
+  // Chaque appel prend un numéro : si une requête plus récente est partie entre-temps, la réponse la plus ancienne est ignorée
+  let webhookLogSeq = 0;
   async function loadWebhookLog() {
     const body = document.getElementById('webhook-log-body');
     const summary = document.getElementById('webhook-log-summary');
+    const stamp = document.getElementById('webhook-log-updated');
+    const btn = document.getElementById('wh-refresh-btn');
     if (!body || !jwtToken) return;
+    const seq = ++webhookLogSeq;
+    if (btn) { btn.disabled = true; btn.textContent = '↻ Actualisation…'; }
+    const failed = () => {
+      if (summary) summary.innerHTML = '';
+      body.innerHTML = '<div style="color:var(--danger);font-size:13px">Impossible de charger le journal.</div>';
+      if (stamp) stamp.textContent = 'Échec de l\'actualisation';
+    };
     try {
       const res = await apiFetch(`${API}/merchant/webhook-deliveries?limit=50`, {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const data = await res.json();
-      if (!data.success) { body.innerHTML = '<div style="color:var(--danger);font-size:13px">Impossible de charger le journal.</div>'; return; }
+      if (seq !== webhookLogSeq) return;
+      if (!data.success) { failed(); return; }
 
       const c = (data.last24h && data.last24h.counts) || {};
       const att = (data.last24h && data.last24h.attempted) || 0;
@@ -1791,11 +1817,13 @@
             (rate !== null && rate !== undefined ? ` (${escapeHtml(String(rate).replace('.', ','))} %)` : '') +
             (c.NO_URL ? ` — ${escapeHtml(String(c.NO_URL))} paiement(s) sans adresse webhook configurée` : '') + '.';
       }
+      if (stamp) stamp.textContent = 'Mis à jour à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
       if (!data.deliveries.length) {
         body.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Aucun envoi pour l\'instant. Un envoi apparaît ici dès qu\'un paiement se termine.</div>';
         return;
       }
+      const mayResend = canResendWebhooks();
       const th = 'text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);font-weight:500;white-space:nowrap';
       const td = 'padding:8px 10px;font-size:12px;vertical-align:top';
       const rows = data.deliveries.map(d => {
@@ -1803,19 +1831,52 @@
         const dt = new Date(d.createdAt);
         const date = dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const tx = d.transactionId ? `<span title="${escapeHtml(d.transactionId)}" style="font-family:monospace">${escapeHtml(String(d.transactionId).slice(0, 8))}…</span>` : '—';
+        const attempt = d.attempt > 1 ? `<div style="color:var(--text-muted);margin-top:3px">Tentative ${escapeHtml(String(d.attempt))}</div>` : '';
+        let retryInfo = '';
+        if (d.nextRetryAt) {
+          const when = new Date(d.nextRetryAt);
+          retryInfo = `<div style="color:#d97706;margin-top:3px">${when.getTime() <= Date.now() ? 'Nouvelle tentative imminente' : 'Nouvelle tentative automatique vers ' + escapeHtml(webhookClock(when))}</div>`;
+        } else if (d.gaveUp) {
+          retryInfo = '<div style="color:var(--text-muted);margin-top:3px">Abandonné après 5 tentatives automatiques</div>';
+        }
+        const resend = (d.canResend && mayResend)
+          ? `<div style="margin-top:6px"><button class="btn-sm" data-resend="${escapeHtml(d.id)}" onclick="resendWebhook(this.dataset.resend, this)">Renvoyer</button></div>` : '';
         return `<tr>
           <td style="${td};white-space:nowrap;color:var(--text-muted)">${escapeHtml(date)}</td>
           <td style="${td}">${tx}<div style="color:var(--text-muted)">${escapeHtml(d.transactionStatus || '')}</div></td>
-          <td style="${td}"><span style="background:${o.bg};color:${o.color};font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap">${escapeHtml(o.label)}</span></td>
-          <td style="${td}">${escapeHtml(webhookExplain(d))}${d.durationMs !== null && d.durationMs !== undefined ? ` <span style="color:var(--text-muted)">· ${escapeHtml(String(d.durationMs))} ms</span>` : ''}</td>
+          <td style="${td}"><span style="background:${o.bg};color:${o.color};font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap">${escapeHtml(o.label)}</span>${attempt}</td>
+          <td style="${td}">${escapeHtml(webhookExplain(d))}${d.durationMs !== null && d.durationMs !== undefined ? ` <span style="color:var(--text-muted)">· ${escapeHtml(String(d.durationMs))} ms</span>` : ''}${retryInfo}${resend}</td>
         </tr>`;
       }).join('');
       body.innerHTML = `<table style="width:100%;border-collapse:collapse">
         <thead><tr><th style="${th}">Date</th><th style="${th}">Paiement</th><th style="${th}">Résultat</th><th style="${th}">Détail</th></tr></thead>
         <tbody>${rows}</tbody></table>`;
     } catch (e) {
-      body.innerHTML = '<div style="color:var(--danger);font-size:13px">Impossible de charger le journal.</div>';
+      if (seq !== webhookLogSeq) return;
+      failed();
+    } finally {
+      if (seq === webhookLogSeq && btn) { btn.disabled = false; btn.textContent = '↻ Actualiser'; }
     }
+  }
+
+  // Bouton « Renvoyer » d'une ligne en échec : le serveur contrôle les droits, le délai et le plafond
+  async function resendWebhook(id, btn) {
+    const status = document.getElementById('webhook-log-status');
+    if (!id || !jwtToken) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+    const say = (icon, color, text) => { if (status) { status.style.color = color; status.textContent = icon + ' ' + text; } };
+    try {
+      const res = await apiFetch(`${API}/merchant/webhook-deliveries/${encodeURIComponent(id)}/resend`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${jwtToken}` }
+      });
+      const data = await res.json();
+      if (!data.success) say('❌', 'var(--danger)', data.error || 'Impossible de renvoyer pour le moment.');
+      else if (data.outcome === 'SUCCESS') say('✅', 'var(--success)', data.message || 'Reçu par votre serveur.');
+      else say('⚠️', '#d97706', data.message || 'Envoi effectué, mais non reçu.');
+    } catch (e) {
+      say('❌', 'var(--danger)', 'Impossible de renvoyer pour le moment.');
+    }
+    await loadWebhookLog();   // la nouvelle tentative apparaît dans le journal
   }
 
   async function loadSettingsPanel() {

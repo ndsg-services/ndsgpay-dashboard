@@ -297,13 +297,19 @@ body { overflow-y: auto !important; }
 <span class="c-gray2">// Content-Type: application/json</span>
 <span class="c-gray2">// X-NDSGPay-Event: deposit.updated</span>
 <span class="c-gray2">// X-NDSGPay-Merchant: &lt;votre identifiant marchand&gt;</span>
+<span class="c-gray2">// X-NDSGPay-Attempt: 1                                         (numéro de la tentative d'envoi)</span>
 <span class="c-gray2">// X-NDSGPay-Signature: t=1760177700,sha256=&lt;signature&gt;    (secret affiché dans Paramètres)</span>
 <span class="c-gray2">//</span>
 <span class="c-gray2">// À savoir</span>
-<span class="c-gray2">// - Répondez en 2xx en moins de 5 secondes. NDSGPay n'essaie qu'une seule fois : il n'y a pas de nouvel envoi.</span>
+<span class="c-gray2">// - Répondez en 2xx en moins de 5 secondes.</span>
+<span class="c-gray2">// - Si votre serveur ne répond pas en 2xx, NDSGPay renvoie automatiquement : après 5 min, 15 min, 1 h puis 6 h</span>
+<span class="c-gray2">//   (5 envois au maximum, sur 24 h). Vous pouvez aussi renvoyer à la main depuis le Journal des webhooks.</span>
+<span class="c-gray2">// - Vous pouvez donc recevoir le même événement plusieurs fois : identifiez-le par depositId (ou payoutId) + status</span>
+<span class="c-gray2">//   et ne le traitez qu'une fois. L'en-tête X-NDSGPay-Attempt donne le numéro de la tentative.</span>
 <span class="c-gray2">// - Ne vous reposez pas uniquement sur les webhooks : pour une transaction encore en cours après quelques</span>
 <span class="c-gray2">//   minutes, interrogez GET /api/deposits/:id (ou /api/payouts/:id).</span>
-<span class="c-gray2">// - Une transaction corrigée plus tard par la réconciliation automatique de NDSGPay n'émet pas de webhook.</span>
+<span class="c-gray2">// - Une transaction terminée plus tard grâce à la réconciliation automatique de NDSGPay émet aussi un webhook</span>
+<span class="c-gray2">//   (quelques minutes après le paiement).</span>
 <span class="c-gray2">// - L'historique de chaque envoi (résultat, code de réponse, durée) est visible dans votre dashboard, Paramètres, Journal des webhooks.</span></pre>
             </div>
           </div>
