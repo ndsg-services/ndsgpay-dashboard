@@ -2986,7 +2986,7 @@
       }
     } catch (e) { console.error('Retrait stats error:', e); }
 
-    // Limites PawaPay
+    // Limites opérateur
     try {
       const r = await apiFetch(API + '/merchant/correspondent-limits', {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
@@ -3069,7 +3069,7 @@
       const d = await r.json();
       if (!d.success) { showErr(d.error || 'Impossible de calculer le maximum.'); return; }
 
-      // Ne pas dépasser non plus le plafond de l'opérateur côté PawaPay
+      // Ne pas dépasser non plus le plafond de l'opérateur
       const opMax = retraitLimits[corr]?.payout?.max;
       const max = opMax ? Math.min(d.max, opMax) : d.max;
 

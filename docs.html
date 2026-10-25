@@ -132,7 +132,7 @@ body { overflow-y: auto !important; }
 <span class="c-green">https://ndsgpay-backend.vercel.app/api</span>
 
 <span class="c-gray2"># Authentification : utilisez votre clé secrète NDSGPay (sk_live_)</span>
-<span class="c-gray2"># NE PAS utiliser un token PawaPay — NDSGPay gère PawaPay pour vous</span>
+<span class="c-gray2"># N'utilisez aucun autre jeton : NDSGPay gère le reste pour vous</span>
 <span class="c-gray2"># Les requêtes POST doivent envoyer l'en-tête Content-Type: application/json</span>
 <span class="c-gray2"># Limites par clé API : 60 créations de paiement/min, 120 consultations/min (HTTP 429 au-delà)</span>
 <span class="c-gray2"># Opérateurs : contactez support@ndsgservices.com pour la liste activée sur votre compte</span></pre>
@@ -289,7 +289,7 @@ body { overflow-y: auto !important; }
   <span class="c-green">"data"</span>: {
     <span class="c-green">"depositId"</span>: <span class="c-green">"b3f0c8e2-..."</span>,      <span class="c-gray2">// ou "payoutId" : l'identifiant renvoyé à la création</span>
     <span class="c-green">"status"</span>: <span class="c-green">"COMPLETED"</span>             <span class="c-gray2">// ou "FAILED"</span>
-    <span class="c-gray2">// ... autres champs du message PawaPay : ne vous fiez qu'à l'identifiant et au statut</span>
+    <span class="c-gray2">// ... autres champs du message de l'opérateur : ne vous fiez qu'à l'identifiant et au statut</span>
   }
 }
 
