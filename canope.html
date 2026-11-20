@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b5d4b">
+<title>Canopé — Renouvellement d’abonnement (démo)</title>
+<style>
+  /* Palette : deux variables à ajuster pour reprendre les couleurs exactes de Canopé */
+  :root {
+    --brand: #0b5d4b;
+    --brand-dark: #084538;
+    --accent: #f2a900;
+    --bg: #f3f6f5;
+    --card: #ffffff;
+    --text: #17302b;
+    --muted: #5b6f6a;
+    --line: #d9e3e0;
+    --danger: #b3261e;
+    --ok: #1b7f4b;
+    --warn: #8a5a00;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  header {
+    background: var(--card); border-bottom: 1px solid var(--line);
+    padding: calc(12px + env(safe-area-inset-top, 0)) 16px 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+  .logo img { height: 40px; width: auto; display: block; }
+  .logo .logo-text { font-weight: 700; font-size: 20px; color: var(--brand); display: none; }
+  .badge-demo {
+    background: var(--accent); color: #2b2000; font-weight: 700; font-size: 12px;
+    letter-spacing: .06em; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  main { max-width: 480px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 22px; margin: 8px 0 4px; color: var(--brand-dark); }
+  p.lead { margin: 0 0 16px; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  label.field { display: block; font-weight: 600; margin-bottom: 6px; }
+  input[type=text], input[type=tel], input[type=password] {
+    width: 100%; font-size: 18px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 10px;
+    background: #fff; color: var(--text); min-height: 50px;
+  }
+  input:focus-visible, button:focus-visible, .option:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+  input.serial { letter-spacing: .35em; text-align: center; font-weight: 700; font-size: 24px; }
+  .hint { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  button.primary {
+    width: 100%; margin-top: 14px; min-height: 52px; font-size: 18px; font-weight: 700; border: 0; border-radius: 12px;
+    background: var(--brand); color: #fff; cursor: pointer;
+  }
+  button.primary:disabled { background: #a9bbb6; cursor: not-allowed; }
+  button.link { background: none; border: 0; color: var(--brand); text-decoration: underline; font-size: 15px; padding: 10px 0; cursor: pointer; }
+  button.secondary {
+    width: 100%; margin-top: 10px; min-height: 48px; font-size: 16px; font-weight: 600; border-radius: 12px;
+    background: #fff; color: var(--brand); border: 2px solid var(--brand); cursor: pointer;
+  }
+  .error { color: var(--danger); font-weight: 600; margin-top: 10px; min-height: 1.2em; }
+  .hidden { display: none !important; }
+  .unit { display: flex; flex-direction: column; gap: 6px; }
+  .unit .vehicle { font-size: 19px; font-weight: 700; }
+  .chip { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; width: fit-content; }
+  .chip.active { background: #dff3e8; color: var(--ok); }
+  .chip.expired { background: #fde4e1; color: var(--danger); }
+  h2 { font-size: 17px; margin: 18px 0 8px; }
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .option {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center;
+    border: 2px solid var(--line); border-radius: 12px; padding: 12px 8px; min-height: 72px; cursor: pointer; background: #fff;
+  }
+  .option input { position: absolute; opacity: 0; pointer-events: none; }
+  .option .big { font-weight: 700; font-size: 17px; }
+  .option .small { color: var(--muted); font-size: 14px; }
+  .option.selected { border-color: var(--brand); background: #e7f3f0; }
+  .total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); font-size: 18px; }
+  .total b { font-size: 24px; color: var(--brand-dark); }
+  .center { text-align: center; }
+  .spinner {
+    width: 54px; height: 54px; margin: 8px auto 14px; border-radius: 50%;
+    border: 6px solid #cfe1dc; border-top-color: var(--brand); animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+  .big-icon { font-size: 56px; line-height: 1; margin: 6px 0 8px; }
+  .dates { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; font-size: 17px; }
+  .dates .old { color: var(--muted); text-decoration: line-through; }
+  .dates .new { color: var(--ok); font-weight: 700; }
+  footer { max-width: 480px; margin: 0 auto; padding: 8px 16px 28px; color: var(--muted); font-size: 13px; text-align: center; }
+  #admin { max-width: 960px; margin: 0 auto; padding: 0 16px 28px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; background: #fff; }
+  th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; white-space: nowrap; }
+  th { background: #eef4f2; }
+  .st-APPLIED { color: var(--ok); font-weight: 700; }
+  .st-PENDING { color: var(--warn); font-weight: 700; }
+  .st-FAILED { color: var(--danger); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <img src="https://www.canopegroupe.com/wp-content/uploads/2023/11/Logo-Canope.png" alt="Canopé" id="logo-img">
+    <span class="logo-text" id="logo-text">Canopé</span>
+  </div>
+  <span class="badge-demo">DÉMO</span>
+</header>
+
+<main>
+  <noscript><div class="card error">Cette page a besoin de JavaScript pour fonctionner.</div></noscript>
+
+  <!-- Étape 1 : numéro de série -->
+  <section id="step-serial">
+    <h1>Renouveler mon abonnement</h1>
+    <p class="lead">Saisissez le numéro de série de votre boîtier, puis payez avec Airtel Money ou Moov Money.</p>
+    <div class="card">
+      <label class="field" for="serial">Numéro de série du boîtier (5 chiffres)</label>
+      <input id="serial" class="serial" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="12345" aria-describedby="serial-error">
+      <div class="error" id="serial-error" role="alert"></div>
+      <button class="primary" id="btn-lookup" type="button" disabled>Vérifier mon boîtier</button>
+    </div>
+  </section>
+
+  <!-- Étape 2 : durée, opérateur, numéro -->
+  <section id="step-offer" class="hidden">
+    <div class="card">
+      <div class="unit">
+        <span class="hint">Boîtier <b id="unit-serial"></b></span>
+        <span class="vehicle" id="unit-vehicle"></span>
+        <span class="chip" id="unit-chip"></span>
+      </div>
+      <button class="link" id="btn-change" type="button">Changer de boîtier</button>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Durée du renouvellement</h2>
+      <div class="options" id="offers" role="radiogroup" aria-label="Durée"></div>
+      <h2>Opérateur</h2>
+      <div class="options" id="operators" role="radiogroup" aria-label="Opérateur"></div>
+      <h2>Numéro qui paie</h2>
+      <input id="msisdn" type="tel" inputmode="tel" autocomplete="tel" placeholder="062 70 94 01" aria-describedby="offer-error">
+      <div class="hint">Vous recevrez une demande de confirmation sur ce numéro. Vérifiez que l’opérateur choisi correspond.</div>
+      <div class="total"><span>À payer</span><b id="total">—</b></div>
+      <div class="error" id="offer-error" role="alert"></div>
+      <button class="primary" id="btn-pay" type="button" disabled>Payer</button>
+    </div>
+  </section>
+
+  <!-- Étape 3 : attente de la validation sur le téléphone -->
+  <section id="step-wait" class="hidden">
+    <div class="card center" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <h1 style="margin-top:0">Validez sur votre téléphone</h1>
+      <p id="wait-msg">En attente de la validation sur votre téléphone…</p>
+      <p class="hint">Une demande de confirmation (code PIN) arrive sur votre téléphone. Temps restant : <b id="countdown">2:00</b></p>
+      <div class="error" id="wait-error" role="alert"></div>
+      <button class="secondary hidden" id="btn-check" type="button">Vérifier maintenant</button>
+      <button class="link" id="btn-wait-back" type="button">Renouveler un autre boîtier</button>
+    </div>
+  </section>
+
+  <!-- Étape 4 : résultat -->
+  <section id="step-result" class="hidden">
+    <div class="card center" aria-live="polite">
+      <div class="big-icon" id="result-icon" aria-hidden="true"></div>
+      <h1 style="margin-top:0" id="result-title"></h1>
+      <p id="result-text"></p>
+      <div class="dates hidden" id="result-dates"><span class="old" id="date-old"></span><span aria-hidden="true">→</span><span class="new" id="date-new"></span></div>
+      <button class="primary" id="btn-again" type="button">Renouveler un boîtier</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div>Démonstration : les paiements sont réels, pour de petits montants (100 à 500 FCFA).</div>
+  <div style="margin-top:6px">Propulsé par NDSGPay — NDSG Services</div>
+  <button class="link" id="btn-admin-toggle" type="button">Espace Canopé (démo)</button>
+</footer>
+
+<section id="admin" class="hidden">
+  <div class="card">
+    <h2 style="margin-top:0">Renouvellements</h2>
+    <div id="admin-login">
+      <label class="field" for="admin-code">Code d’accès</label>
+      <input id="admin-code" type="password" autocomplete="off">
+      <button class="primary" id="btn-admin-load" type="button">Afficher les renouvellements</button>
+    </div>
+    <div class="error" id="admin-error" role="alert"></div>
+    <div id="admin-list" class="hidden">
+      <button class="secondary" id="btn-admin-refresh" type="button" style="margin:0 0 12px">Actualiser</button>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Date</th><th>Boîtier</th><th>Véhicule</th><th>Durée</th><th>Montant</th><th>Opérateur</th><th>Statut</th><th>Nouvelle échéance</th><th>E-mail</th></tr></thead>
+          <tbody id="admin-rows"></tbody>
+        </table>
+      </div>
+      <div class="hint" id="admin-empty">Aucun renouvellement pour le moment.</div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+
+  var API = "https://ndsgpay-backend.vercel.app/api/demo/canope";
+  var WAIT_MS = 120000;       // durée d’attente de la validation sur le téléphone
+  var POLL_MS = 3000;
+  var STORE_KEY = "canope.pending";
+  var OPERATORS = [{ id: "AIRTEL_GAB", label: "Airtel Money" }, { id: "MOOV_GAB", label: "Moov Money" }];
+
+  var state = { lastOk: false, unit: null, offers: [], months: null, correspondent: null, depositId: null, pollTimer: null, countTimer: null, deadline: 0, inflight: false, failures: 0, adminCode: "" };
+
+  function $(id) { return document.getElementById(id); }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function text(node, value) { node.textContent = value == null ? "" : String(value); }
+
+  // Toutes les données venues du serveur passent par textContent : jamais d’HTML injecté.
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Africa/Libreville" });
+  }
+  function fmtDateTime(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Libreville" });
+  }
+  function fmtMoney(n) { return Number(n).toLocaleString("fr-FR") + " FCFA"; }
+
+  function store(value) { try { if (value) sessionStorage.setItem(STORE_KEY, JSON.stringify(value)); else sessionStorage.removeItem(STORE_KEY); } catch (e) { /* stockage indisponible */ } }
+  function stored() { try { return JSON.parse(sessionStorage.getItem(STORE_KEY) || "null"); } catch (e) { return null; } }
+
+  function api(method, path, body, headers) {
+    var opts = { method: method, headers: Object.assign({ "Content-Type": "application/json" }, headers || {}) };
+    if (body) opts.body = JSON.stringify(body);
+    return fetch(API + path, opts).then(
+      function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }, function () { return { status: r.status, body: null }; }); },
+      function () { return { status: 0, body: null }; }
+    );
+  }
+  var NETWORK_ERROR = "Connexion impossible. Vérifiez votre réseau puis réessayez.";
+  function errorOf(r) { return (r.body && r.body.error) || (r.status === 0 ? NETWORK_ERROR : "Une erreur est survenue. Réessayez dans un instant."); }
+
+  var STEPS = ["step-serial", "step-offer", "step-wait", "step-result"];
+  function show(step) {
+    STEPS.forEach(function (s) { $(s).classList.toggle("hidden", s !== step); });
+    window.scrollTo(0, 0);
+  }
+
+  /* ── Étape 1 : numéro de série ───────────────────────────────────────── */
+  var serialInput = $("serial");
+  serialInput.addEventListener("input", function () {
+    var digits = serialInput.value.replace(/\D/g, "").slice(0, 5);
+    if (digits !== serialInput.value) serialInput.value = digits;
+    $("btn-lookup").disabled = digits.length !== 5;
+    text($("serial-error"), "");
+  });
+  serialInput.addEventListener("keydown", function (e) { if (e.key === "Enter" && !$("btn-lookup").disabled) $("btn-lookup").click(); });
+
+  $("btn-lookup").addEventListener("click", function () {
+    var serial = serialInput.value;
+    if (!/^\d{5}$/.test(serial)) return;
+    var btn = $("btn-lookup"); btn.disabled = true; text(btn, "Vérification…"); text($("serial-error"), "");
+    api("GET", "/unit/" + serial).then(function (r) {
+      text(btn, "Vérifier mon boîtier"); btn.disabled = serialInput.value.length !== 5;
+      if (r.status === 200 && r.body && r.body.success) { state.unit = r.body.unit; state.offers = r.body.offers || []; renderOffer(); show("step-offer"); }
+      else text($("serial-error"), errorOf(r));
+    });
+  });
+
+  /* ── Étape 2 : durée, opérateur, numéro ──────────────────────────────── */
+  function radio(container, name, value, big, small, onPick) {
+    var label = document.createElement("label"); label.className = "option";
+    var input = document.createElement("input"); input.type = "radio"; input.name = name; input.value = value;
+    var b = document.createElement("span"); b.className = "big"; text(b, big);
+    label.appendChild(input); label.appendChild(b);
+    if (small) { label.appendChild(document.createTextNode(" ")); var s = document.createElement("span"); s.className = "small"; text(s, small); label.appendChild(s); }
+    input.addEventListener("change", function () { onPick(value); markSelected(container); });
+    container.appendChild(label);
+    return input;
+  }
+  function markSelected(container) {
+    Array.prototype.forEach.call(container.querySelectorAll("label.option"), function (l) { l.classList.toggle("selected", l.querySelector("input").checked); });
+  }
+
+  function renderOffer() {
+    var u = state.unit;
+    text($("unit-serial"), u.serial); text($("unit-vehicle"), u.vehicle);
+    var chip = $("unit-chip");
+    chip.className = "chip " + (u.active ? "active" : "expired");
+    text(chip, (u.active ? "Abonnement actif jusqu’au " : "Abonnement expiré depuis le ") + fmtDate(u.until));
+
+    var offers = $("offers"); clear(offers); state.months = null;
+    state.offers.forEach(function (o) {
+      var input = radio(offers, "months", String(o.months), o.months + " mois", fmtMoney(o.amount), function (v) { state.months = Number(v); updateTotal(); });
+      if (o.months === 3) { input.checked = true; state.months = 3; }
+    });
+    markSelected(offers);
+
+    var ops = $("operators"); clear(ops); state.correspondent = null;
+    OPERATORS.forEach(function (op) { radio(ops, "operator", op.id, op.label, "", function (v) { state.correspondent = v; updateTotal(); }); });
+
+    $("msisdn").value = ""; text($("offer-error"), "");
+    updateTotal();
+  }
+
+  function selectedOffer() { return state.offers.filter(function (o) { return o.months === state.months; })[0] || null; }
+  function updateTotal() {
+    var o = selectedOffer();
+    text($("total"), o ? fmtMoney(o.amount) : "—");
+    var ready = !!o && !!state.correspondent && digitsOf($("msisdn").value).length >= 8;
+    var btn = $("btn-pay"); btn.disabled = !ready;
+    text(btn, o ? "Payer " + fmtMoney(o.amount) : "Payer");
+  }
+  function digitsOf(v) { return String(v || "").replace(/\D/g, ""); }
+
+  // Pré-sélection de l’opérateur d’après le numéro (06 → Moov, 07 → Airtel) ; le client peut toujours changer.
+  $("msisdn").addEventListener("input", function () {
+    text($("offer-error"), "");
+    var d = digitsOf($("msisdn").value).replace(/^241/, "").replace(/^0/, "");
+    var guess = d.charAt(0) === "7" ? "AIRTEL_GAB" : d.charAt(0) === "6" ? "MOOV_GAB" : null;
+    if (guess && !state.correspondent) {
+      var radioEl = $("operators").querySelector('input[value="' + guess + '"]');
+      if (radioEl) { radioEl.checked = true; state.correspondent = guess; markSelected($("operators")); }
+    }
+    updateTotal();
+  });
+
+  $("btn-change").addEventListener("click", function () { state.unit = null; serialInput.value = ""; $("btn-lookup").disabled = true; show("step-serial"); serialInput.focus(); });
+
+  $("btn-pay").addEventListener("click", function () {
+    var o = selectedOffer(); if (!o || !state.correspondent) return;
+    var btn = $("btn-pay"); btn.disabled = true; text(btn, "Envoi en cours…"); text($("offer-error"), "");
+    api("POST", "/pay", { serial: state.unit.serial, months: o.months, correspondent: state.correspondent, msisdn: $("msisdn").value }).then(function (r) {
+      if (r.status === 200 && r.body && r.body.success) {
+        state.depositId = r.body.depositId;
+        store({ depositId: state.depositId, serial: state.unit.serial, months: o.months, at: Date.now() });
+        startWaiting(WAIT_MS);
+      } else {
+        text($("offer-error"), errorOf(r)); updateTotal();
+      }
+    });
+  });
+
+  /* ── Étape 3 : attente et consultation du statut ─────────────────────── */
+  function stopTimers() { clearInterval(state.pollTimer); clearInterval(state.countTimer); state.pollTimer = state.countTimer = null; }
+
+  function startWaiting(ms) {
+    stopTimers(); state.failures = 0; state.inflight = false;
+    state.deadline = Date.now() + ms;
+    text($("wait-msg"), "En attente de la validation sur votre téléphone…"); text($("wait-error"), "");
+    $("btn-check").classList.add("hidden");
+    show("step-wait"); updateCountdown(); tick();
+    state.pollTimer = setInterval(tick, POLL_MS); state.countTimer = setInterval(updateCountdown, 1000);
+  }
+  function updateCountdown() {
+    var left = Math.max(0, Math.round((state.deadline - Date.now()) / 1000));
+    text($("countdown"), Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0"));
+  }
+  function tick() {
+    if (state.inflight || !state.depositId) return;
+    state.inflight = true;
+    api("GET", "/status/" + encodeURIComponent(state.depositId)).then(function (r) {
+      state.inflight = false;
+      var b = r.body;
+      if (r.status === 404) { stopTimers(); store(null); return showResult(false, "Paiement introuvable", "Ce paiement n’est plus suivi. Vous pouvez recommencer."); }
+      if (!b || !b.success) {
+        state.failures++;
+        if (state.failures >= 5) { stopTimers(); text($("wait-error"), NETWORK_ERROR); $("btn-check").classList.remove("hidden"); }
+        return;
+      }
+      state.failures = 0; text($("wait-error"), "");
+      if (b.state === "PAID") { stopTimers(); store(null); return showResult(true, "Abonnement prolongé", (b.vehicle ? b.vehicle + " : " : "") + "+" + b.months + " mois.", b); }
+      if (b.state === "FAILED") { stopTimers(); store(null); return showResult(false, "Paiement non abouti", b.message); }
+      text($("wait-msg"), b.message);
+      if (Date.now() > state.deadline) {
+        stopTimers();
+        text($("wait-msg"), "Nous n’avons pas encore reçu la confirmation.");
+        text($("wait-error"), "Si vous avez validé le paiement, votre abonnement sera prolongé automatiquement dans quelques instants.");
+        $("btn-check").classList.remove("hidden");
+      }
+    });
+  }
+  $("btn-check").addEventListener("click", function () { startWaiting(30000); });
+  $("btn-wait-back").addEventListener("click", reset);
+
+  /* ── Étape 4 : résultat ──────────────────────────────────────────────── */
+  function showResult(ok, title, message, b) {
+    state.lastOk = ok;
+    text($("result-icon"), ok ? "✅" : "⚠️");
+    text($("result-title"), title); text($("result-text"), message);
+    var dates = $("result-dates");
+    if (ok && b && b.newExpiry) {
+      text($("date-old"), b.previousExpiry ? fmtDate(b.previousExpiry) : ""); $("date-old").classList.toggle("hidden", !b.previousExpiry);
+      text($("date-new"), "Nouvelle échéance : " + fmtDate(b.newExpiry)); dates.classList.remove("hidden");
+    } else dates.classList.add("hidden");
+    text($("btn-again"), ok ? "Renouveler un autre boîtier" : "Réessayer");
+    show("step-result");
+  }
+  $("btn-again").addEventListener("click", function () { if (!state.lastOk && state.unit) { renderOffer(); show("step-offer"); } else reset(); });
+
+  function reset() {
+    stopTimers(); store(null);
+    state.unit = null; state.depositId = null; state.months = null; state.correspondent = null;
+    serialInput.value = ""; $("btn-lookup").disabled = true; text($("serial-error"), "");
+    show("step-serial");
+  }
+
+  /* Reprise : le téléphone a pu recharger la page pendant la validation du paiement */
+  (function resume() {
+    var p = stored();
+    if (p && p.depositId && Date.now() - p.at < 10 * 60 * 1000) { state.depositId = p.depositId; startWaiting(Math.max(10000, WAIT_MS - (Date.now() - p.at))); }
+    else store(null);
+  })();
+
+  /* ── Espace Canopé : liste des renouvellements (code d’accès) ────────── */
+  $("btn-admin-toggle").addEventListener("click", function () { $("admin").classList.toggle("hidden"); });
+  function loadRenewals() {
+    var code = state.adminCode; text($("admin-error"), "");
+    api("GET", "/renewals", null, { Authorization: "Bearer " + code }).then(function (r) {
+      if (r.status === 200 && r.body && r.body.success) { renderRenewals(r.body.renewals || []); $("admin-login").classList.add("hidden"); $("admin-list").classList.remove("hidden"); }
+      else { state.adminCode = ""; $("admin-login").classList.remove("hidden"); $("admin-list").classList.add("hidden"); text($("admin-error"), r.status === 401 ? "Code d’accès invalide." : errorOf(r)); }
+    });
+  }
+  $("btn-admin-load").addEventListener("click", function () { state.adminCode = $("admin-code").value.trim(); if (state.adminCode) loadRenewals(); });
+  $("admin-code").addEventListener("keydown", function (e) { if (e.key === "Enter") $("btn-admin-load").click(); });
+  $("btn-admin-refresh").addEventListener("click", loadRenewals);
+
+  var STATUS_LABEL = { APPLIED: "Prolongé", PENDING: "En attente", FAILED: "Échoué" };
+  function renderRenewals(rows) {
+    var tbody = $("admin-rows"); clear(tbody);
+    $("admin-empty").classList.toggle("hidden", rows.length > 0);
+    rows.forEach(function (x) {
+      var tr = document.createElement("tr");
+      var cells = [fmtDateTime(x.createdAt), x.serial, x.vehicle || "—", x.months + " mois", fmtMoney(x.amount),
+        x.correspondent === "MOOV_GAB" ? "Moov" : x.correspondent === "AIRTEL_GAB" ? "Airtel" : x.correspondent, null, x.newExpiry ? fmtDate(x.newExpiry) : "—", x.emailSent ? "Envoyé" : "—"];
+      cells.forEach(function (c, i) {
+        var td = document.createElement("td");
+        if (i === 6) { td.className = "st-" + (STATUS_LABEL[x.status] ? x.status : "PENDING"); text(td, STATUS_LABEL[x.status] || x.status); } else text(td, c);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* Logo : si l’image du site Canopé ne charge pas, on affiche le nom en texte */
+  $("logo-img").addEventListener("error", function () { $("logo-img").classList.add("hidden"); $("logo-text").style.display = "inline"; });
+})();
+</script>
+</body>
+</html>
