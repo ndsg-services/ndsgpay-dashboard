@@ -162,9 +162,9 @@ const PENDING = (m) => ({ status: 200, body: { success: true, state: 'PENDING', 
   p = load({ pending: '{pas du json' }); check('suivi illisible : ignoré sans erreur', JSON.stringify(p.visibleStep()) === '["step-serial"]');
 
   group('G. Espace Canopé (liste des renouvellements)');
-  const rows = [{ createdAt: '2026-11-20T10:05:00.000Z', serial: '12345', vehicle: evil, months: 3, amount: 200, correspondent: 'MOOV_GAB', status: 'APPLIED', newExpiry: '2027-03-02T10:00:00.000Z', emailSent: true },
-    { createdAt: '2026-11-20T09:00:00.000Z', serial: '34567', vehicle: 'Renault Duster – GA 3456 EF', months: 1, amount: 100, correspondent: 'AIRTEL_GAB', status: 'PENDING', newExpiry: null, emailSent: false },
-    { createdAt: '2026-11-19T09:00:00.000Z', serial: '23456', vehicle: null, months: 12, amount: 500, correspondent: 'AIRTEL_GAB', status: 'FAILED', newExpiry: null, emailSent: false }];
+  const rows = [{ createdAt: '2026-11-20T10:05:00.000Z', serial: '12345', vehicle: evil, months: 3, amount: 200, correspondent: 'MOOV_GAB', payerLast4: '9401', status: 'APPLIED', newExpiry: '2027-03-02T10:00:00.000Z', emailSent: true },
+    { createdAt: '2026-11-20T09:00:00.000Z', serial: '34567', vehicle: 'Renault Duster – GA 3456 EF', months: 1, amount: 100, correspondent: 'AIRTEL_GAB', payerLast4: '7700', status: 'PENDING', newExpiry: null, emailSent: false },
+    { createdAt: '2026-11-19T09:00:00.000Z', serial: '23456', vehicle: null, months: 12, amount: 500, correspondent: 'AIRTEL_GAB', payerLast4: null, status: 'FAILED', newExpiry: null, emailSent: false }];
   p = load({ cfg: { renewals: rows } });
   check('l\'espace Canopé est caché par défaut', !p.shown('admin') === true);
   await p.click('btn-admin-toggle'); check('il s\'affiche sur demande', p.shown('admin'));
@@ -175,13 +175,24 @@ const PENDING = (m) => ({ status: 200, body: { success: true, state: 'PENDING', 
   check('le code part dans l\'en-tête Authorization (jamais dans l\'adresse)', rc.headers.Authorization === 'Bearer code-ok' && !/code-ok/.test(rc.url), rc);
   check('bon code : liste affichée avec 3 lignes', !p.$('admin-list').classList.contains('hidden') && p.doc.querySelectorAll('#admin-rows tr').length === 3 && p.$('admin-login').classList.contains('hidden'));
   const cells = [...p.doc.querySelectorAll('#admin-rows tr')[0].children].map((c) => c.textContent);
-  check('1re ligne : boîtier, durée, montant, opérateur, statut, échéance, e-mail', cells[1] === '12345' && cells[3] === '3 mois' && /200/.test(cells[4]) && cells[5] === 'Moov' && cells[6] === 'Prolongé' && cells[7] === '02/03/2027' && cells[8] === 'Envoyé', cells);
+  check('1re ligne : boîtier, durée, montant, opérateur, payeur, statut, échéance, e-mail', cells[1] === '12345' && cells[3] === '3 mois' && /200/.test(cells[4]) && cells[5] === 'Moov' && cells[6] === '•••• 9401' && cells[7] === 'Prolongé' && cells[8] === '02/03/2027' && cells[9] === 'Envoyé', cells);
   check('véhicule hostile dans le tableau : texte seulement, aucun élément injecté', cells[2] === evil && p.doc.querySelectorAll('#admin-rows img, #admin-rows script').length === 0 && !p.win.__pwned);
-  check('statuts colorés : Prolongé, En attente, Échoué', [...p.doc.querySelectorAll('#admin-rows tr')].map((tr) => tr.children[6].textContent).join('|') === 'Prolongé|En attente|Échoué' && p.doc.querySelector('#admin-rows tr:nth-child(2) td:nth-child(7)').className === 'st-PENDING');
+  check('statuts colorés : Prolongé, En attente, Échoué', [...p.doc.querySelectorAll('#admin-rows tr')].map((tr) => tr.children[7].textContent).join('|') === 'Prolongé|En attente|Échoué' && p.doc.querySelector('#admin-rows tr:nth-child(2) td:nth-child(8)').className === 'st-PENDING');
   check('véhicule absent : tiret', p.doc.querySelectorAll('#admin-rows tr')[2].children[2].textContent === '—');
+  check('en-têtes dans l\'ordre : « Payeur » juste après « Opérateur »', [...p.doc.querySelectorAll('#admin-list thead th')].map((t) => t.textContent).join('|') === 'Date|Boîtier|Véhicule|Durée|Montant|Opérateur|Payeur|Statut|Nouvelle échéance|E-mail', [...p.doc.querySelectorAll('#admin-list thead th')].map((t) => t.textContent));
+  check('chaque ligne a autant de cases que d\'en-têtes (10)', [...p.doc.querySelectorAll('#admin-rows tr')].every((tr) => tr.children.length === 10));
+  check('payeur : « •••• 7700 » ; payeur absent (null) : tiret', p.doc.querySelectorAll('#admin-rows tr')[1].children[6].textContent === '•••• 7700' && p.doc.querySelectorAll('#admin-rows tr')[2].children[6].textContent === '—');
   p.config.renewals = []; await p.click('btn-admin-refresh');
   check('« Actualiser » recharge, liste vide : message « Aucun renouvellement »', p.doc.querySelectorAll('#admin-rows tr').length === 0 && !p.$('admin-empty').classList.contains('hidden'));
   check('le code n\'est stocké nulle part (ni session, ni stockage local)', p.win.sessionStorage.length === 0 && p.win.localStorage.length === 0);
+
+  group('G2. Colonne « Payeur » : formats reçus');
+  const payerRows = [9401, '7700', 'abc', '12345', '', null, undefined, evil, '12 3', '9401 '].map((v, i) => ({ createdAt: '2026-11-20T10:0' + i + ':00.000Z', serial: '12345', vehicle: 'V', months: 1, amount: 100, correspondent: 'AIRTEL_GAB', status: 'APPLIED', newExpiry: null, emailSent: false, payerLast4: v }));
+  p = load({ cfg: { renewals: payerRows } }); await p.click('btn-admin-toggle'); p.$('admin-code').value = 'code-ok'; await p.click('btn-admin-load');
+  const shownPayers = [...p.doc.querySelectorAll('#admin-rows tr')].map((tr) => tr.children[6].textContent);
+  check('seuls 4 chiffres exacts s\'affichent (nombre ou texte) ; tout le reste → tiret', JSON.stringify(shownPayers) === JSON.stringify(['•••• 9401', '•••• 7700', '—', '—', '—', '—', '—', '—', '—', '—']), shownPayers);
+  check('valeur hostile reçue pour le payeur : jamais affichée, aucun élément injecté', !shownPayers.includes(evil) && p.doc.querySelectorAll('#admin-rows img, #admin-rows script').length === 0 && !p.win.__pwned);
+  check('le numéro entier n\'apparaît nulle part dans le tableau', !/24162709401|062709401/.test(p.$('admin-rows').textContent));
 
   group('H. Divers');
   p = load(); p.$('logo-img').dispatchEvent(new p.win.Event('error')); check('logo qui ne charge pas : le nom Canopé s\'affiche à la place', p.$('logo-img').classList.contains('hidden') && p.$('logo-text').style.display === 'inline');

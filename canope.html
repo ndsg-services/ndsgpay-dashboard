@@ -196,7 +196,7 @@
       <button class="secondary" id="btn-admin-refresh" type="button" style="margin:0 0 12px">Actualiser</button>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>Date</th><th>Boîtier</th><th>Véhicule</th><th>Durée</th><th>Montant</th><th>Opérateur</th><th>Statut</th><th>Nouvelle échéance</th><th>E-mail</th></tr></thead>
+          <thead><tr><th>Date</th><th>Boîtier</th><th>Véhicule</th><th>Durée</th><th>Montant</th><th>Opérateur</th><th>Payeur</th><th>Statut</th><th>Nouvelle échéance</th><th>E-mail</th></tr></thead>
           <tbody id="admin-rows"></tbody>
         </table>
       </div>
@@ -435,16 +435,19 @@
   $("btn-admin-refresh").addEventListener("click", loadRenewals);
 
   var STATUS_LABEL = { APPLIED: "Prolongé", PENDING: "En attente", FAILED: "Échoué" };
+  var STATUS_COL = 7;   // colonne « Statut » du tableau
+  // Le serveur ne conserve que les 4 derniers chiffres du numéro payeur ; toute autre valeur s’affiche « — ».
+  function fmtPayer(v) { var s = v == null ? "" : String(v); return /^\d{4}$/.test(s) ? "•••• " + s : "—"; }
   function renderRenewals(rows) {
     var tbody = $("admin-rows"); clear(tbody);
     $("admin-empty").classList.toggle("hidden", rows.length > 0);
     rows.forEach(function (x) {
       var tr = document.createElement("tr");
       var cells = [fmtDateTime(x.createdAt), x.serial, x.vehicle || "—", x.months + " mois", fmtMoney(x.amount),
-        x.correspondent === "MOOV_GAB" ? "Moov" : x.correspondent === "AIRTEL_GAB" ? "Airtel" : x.correspondent, null, x.newExpiry ? fmtDate(x.newExpiry) : "—", x.emailSent ? "Envoyé" : "—"];
+        x.correspondent === "MOOV_GAB" ? "Moov" : x.correspondent === "AIRTEL_GAB" ? "Airtel" : x.correspondent, fmtPayer(x.payerLast4), null, x.newExpiry ? fmtDate(x.newExpiry) : "—", x.emailSent ? "Envoyé" : "—"];
       cells.forEach(function (c, i) {
         var td = document.createElement("td");
-        if (i === 6) { td.className = "st-" + (STATUS_LABEL[x.status] ? x.status : "PENDING"); text(td, STATUS_LABEL[x.status] || x.status); } else text(td, c);
+        if (i === STATUS_COL) { td.className = "st-" + (STATUS_LABEL[x.status] ? x.status : "PENDING"); text(td, STATUS_LABEL[x.status] || x.status); } else text(td, c);
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
