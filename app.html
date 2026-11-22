@@ -1378,6 +1378,7 @@
   </main>
 </div><!-- /app -->
 
+<script src="/vendor/qrcode-generator.js"></script>
 <script>
   // ── PANELS ─────────────────────────────────────────────────
   const API = 'https://ndsgpay-backend.vercel.app/api';
@@ -3322,6 +3323,7 @@
     list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>';
     try {
       const res  = await apiFetch(API + '/pos-keys', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      if (res.status === 403) { list.textContent = (localStorage.getItem('ndsgpayDashLang') === 'en') ? 'Reserved to the account owner and administrators.' : 'Réservé au propriétaire et aux administrateurs du compte.'; return; }
       const data = await res.json();
       if (!data.success) return;
       const lang = localStorage.getItem('ndsgpayDashLang') || 'fr';
@@ -3411,22 +3413,55 @@
     } catch (err) { alert('Erreur reseau'); }
   }
 
+  // QR code dessiné DANS la page à partir de la matrice calculée par la bibliothèque locale (vendor/qrcode-generator.js).
+  // Le lien d'activation contient la clé secrète de la caisse : il ne doit sortir de la page par aucun service extérieur.
+  function renderQR(container, text) {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    const n = qr.getModuleCount(), margin = 2, size = n + 2 * margin, NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+    svg.setAttribute('width', '200'); svg.setAttribute('height', '200');
+    svg.setAttribute('shape-rendering', 'crispEdges'); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'QR code');
+    svg.style.borderRadius = '8px';
+    const bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('width', size); bg.setAttribute('height', size); bg.setAttribute('fill', '#ffffff');
+    let d = '';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += 'M' + (c + margin) + ',' + (r + margin) + 'h1v1h-1z';
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', d); path.setAttribute('fill', '#000000');
+    svg.appendChild(bg); svg.appendChild(path);
+    while (container.firstChild) container.removeChild(container.firstChild);
+    container.appendChild(svg);
+  }
+
+  function setQRMessage(text, danger) {
+    const c = document.getElementById('qr-container');
+    while (c.firstChild) c.removeChild(c.firstChild);
+    const m = document.createElement('div');
+    m.style.cssText = 'font-size:' + (danger ? '12' : '11') + 'px;padding:0 10px;color:var(' + (danger ? '--danger' : '--text-muted') + ')';
+    m.textContent = text;
+    c.appendChild(m);
+  }
+
   async function showQRCode(id, label) {
     document.getElementById('qr-label').textContent = label;
-    document.getElementById('qr-container').innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Chargement...</div>';
+    setQRMessage('Chargement...');
     document.getElementById('qr-url').textContent = '';
     document.getElementById('poskey-qr-modal').style.display = 'flex';
+    currentQRUrl = '';
     try {
       const res  = await apiFetch(API + '/pos-keys/' + id + '/qr', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      if (res.status === 403) { setQRMessage('Réservé au propriétaire et aux administrateurs du compte.', true); return; }
       const data = await res.json();
-      if (data.success) {
-        currentQRUrl = data.activationUrl;
-        document.getElementById('qr-url').textContent = data.activationUrl;
-        const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.activationUrl);
-        document.getElementById('qr-container').innerHTML = '<img src="' + qrSrc + '" style="width:200px;height:200px;border-radius:8px" />';
-      }
+      if (!data.success) { setQRMessage(data.error || 'Erreur', true); return; }
+      currentQRUrl = data.activationUrl;
+      document.getElementById('qr-url').textContent = data.activationUrl;
+      if (typeof qrcode !== 'function') { setQRMessage('QR code indisponible : utilisez « Copier le lien ».', true); return; }
+      renderQR(document.getElementById('qr-container'), data.activationUrl);
     } catch (err) {
-      document.getElementById('qr-container').innerHTML = '<div style="color:var(--danger);font-size:12px">Erreur</div>';
+      setQRMessage('Erreur', true);
     }
   }
 

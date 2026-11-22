@@ -27,3 +27,19 @@ NODE_PATH=/tmp/jsdom/node_modules node tests/pos-ui.js
 ```
 Les champs envoyés par le serveur (`GET /api/pos/operators`) sont décrits dans `ndsgpay-backend/src/lib/pos-operators.js` ;
 chaque dépôt contrôle ces champs de son côté (« contrat avec la caisse » / « contrat avec le serveur »).
+
+---
+
+# Test du QR code et du panneau « Caisses POS » (`app.html`)
+
+`tests/qr-ui.js` charge le VRAI `app.html` dans JSDOM : le QR d'activation d'une caisse est dessiné **dans la page**
+(bibliothèque copiée dans `vendor/`), puis **relu avec un décodeur** : il doit redonner exactement le lien d'activation. Le test
+vérifie aussi qu'aucune requête ne part vers un autre site (le lien contient la clé secrète), la fidélité du dessin case par case,
+la zone blanche, les cas d'échec (rôle sans droit, clé inactive, réseau coupé, bibliothèque absente) et que les textes venus du
+serveur ne sont jamais injectés comme du HTML.
+
+```
+cd /tmp/jsdom && npm i jsdom jsqr                       # une fois, hors du dépôt
+NODE_PATH=/tmp/jsdom/node_modules node tests/qr-ui.js
+```
+Sans `jsqr`, seul le contrôle de relecture du QR est ignoré. La provenance de la bibliothèque est dans `vendor/README.md`.
