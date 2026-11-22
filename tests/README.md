@@ -17,10 +17,13 @@ Ce test ne remplace pas un essai sur un vrai téléphone avec un vrai paiement.
 
 # Test de la caisse (`pos.html`)
 
-`tests/pos-operators.js` extrait le VRAI code de la page (liste `OPERATORS` et fonction `detectOperator`) et vérifie
-quel opérateur est choisi d'après les premiers chiffres du numéro : Airtel et Moov au Gabon, MTN au Cameroun, aucun
-préfixe attribué à deux opérateurs, aucun opérateur que le serveur refuserait (si le dépôt `ndsgpay-backend` est à côté).
+`tests/pos-ui.js` charge le VRAI fichier dans JSDOM, avec un faux serveur : clé et permissions (onglet Payout), choix du pays,
+de l'opérateur et de la devise à partir de la liste du serveur, liste de secours, dernier choix mémorisé, présélection de
+l'opérateur au Gabon, numéro envoyé pour chaque pays (indicatif, zéro national), montants, limites et centimes (USD),
+contenu des requêtes, suivi du paiement, historique totalisé par devise, données hostiles affichées comme du texte.
 
 ```
-node tests/pos-operators.js          # aucune dépendance
+NODE_PATH=/tmp/jsdom/node_modules node tests/pos-ui.js
 ```
+Les champs envoyés par le serveur (`GET /api/pos/operators`) sont décrits dans `ndsgpay-backend/src/lib/pos-operators.js` ;
+chaque dépôt contrôle ces champs de son côté (« contrat avec la caisse » / « contrat avec le serveur »).

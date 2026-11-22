@@ -453,13 +453,22 @@
     </div>
   </div>
 
-  <!-- Numéro client -->
+  <!-- Pays, opérateur et numéro client -->
   <div style="padding:0 16px 12px;flex-shrink:0">
     <div style="background:var(--surface);border-radius:12px;padding:10px 14px;border:1px solid var(--border)">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select id="country-select" aria-label="Pays" onchange="onCountryChange(this.value)"
+          style="flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:var(--sans);padding:8px 6px"></select>
+        <select id="operator-select" aria-label="Opérateur" onchange="onOperatorChange(this.value)"
+          style="flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:var(--sans);padding:8px 6px"></select>
+      </div>
       <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Numéro mobile client</div>
-      <input id="msisdn-input" type="tel" placeholder="074 XX XX XX" maxlength="15" oninput="onMsisdnChange(this.value)"
-        style="background:transparent;border:none;color:var(--text);font-size:20px;font-family:var(--sans);font-weight:500;outline:none;width:100%"/>
-      <div class="operator-badge unknown" id="operator-badge" style="margin-top:4px">— Opérateur inconnu</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="calling-code" style="font-size:18px;font-weight:600;color:var(--text-muted)">+</span>
+        <input id="msisdn-input" type="tel" inputmode="tel" placeholder="62 70 94 01" maxlength="18" oninput="onMsisdnChange(this.value)"
+          style="background:transparent;border:none;color:var(--text);font-size:20px;font-family:var(--sans);font-weight:500;outline:none;width:100%"/>
+      </div>
+      <div class="operator-badge unknown" id="operator-badge" style="margin-top:4px">Chargement des opérateurs…</div>
     </div>
   </div>
 
@@ -474,7 +483,7 @@
     <button class="numpad-btn" onclick="numpad('7')">7</button>
     <button class="numpad-btn" onclick="numpad('8')">8</button>
     <button class="numpad-btn" onclick="numpad('9')">9</button>
-    <button class="numpad-btn" onclick="numpad('000')" style="font-size:16px">000</button>
+    <button class="numpad-btn" id="numpad-extra" onclick="numpad('extra')" style="font-size:16px">000</button>
     <button class="numpad-btn" onclick="numpad('0')" style="grid-column:span 1">0</button>
     <button class="numpad-btn" onclick="numpad('del')" style="font-size:16px">⌫</button>
   </div>
@@ -541,11 +550,11 @@
     <div style="padding:16px 20px;border-top:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
         <span style="color:var(--text-muted)">Total encaissé</span>
-        <span id="history-total-collect" style="font-weight:600;color:var(--green)">0 XAF</span>
+        <span id="history-total-collect" style="font-weight:600;color:var(--green);text-align:right;white-space:pre-line">0</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:13px">
         <span style="color:var(--text-muted)">Total envoyé</span>
-        <span id="history-total-payout" style="font-weight:600;color:var(--orange)">0 XAF</span>
+        <span id="history-total-payout" style="font-weight:600;color:var(--orange);text-align:right;white-space:pre-line">0</span>
       </div>
     </div>
   </div>
@@ -565,26 +574,139 @@
   let currentTxId = '';
   let pollInterval = null;
 
-  // ── Opérateurs par préfixe ────────────────────────────────────
-  const OPERATORS = [
-    // Gabon
-    { prefix: ['074', '076', '077'], name: 'Airtel Gabon',   correspondent: 'AIRTEL_GAB', flag: '🇬🇦', currency: 'XAF' },
-    { prefix: ['060', '062', '065', '066'], name: 'Moov Gabon', correspondent: 'MOOV_GAB',   flag: '🇬🇦', currency: 'XAF' },
-    // Cameroun
-    { prefix: ['067', '068', '069'], name: 'MTN Cameroun',   correspondent: 'MTN_MOMO_CMR', flag: '🇨🇲', currency: 'XAF' },
-    { prefix: ['699', '655', '656'], name: 'Orange Cameroun',correspondent: 'ORANGE_CMR',   flag: '🇨🇲', currency: 'XAF' },
+  // ── Opérateurs : liste fournie par le serveur ─────────────────
+  // Le serveur renvoie les opérateurs que NDSGPay sait traiter ET qui sont activés sur le compte de paiement,
+  // une entrée par opérateur et par devise (ex. RD Congo en CDF et en USD), avec limites et décimales.
+  // Si le serveur ne répond pas, la caisse retombe sur cette courte liste de secours.
+  const EMBEDDED_OPERATORS = [
+    { correspondent: 'AIRTEL_GAB',   name: 'Airtel Money', country: 'GAB', countryName: 'Gabon',    flag: '🇬🇦', callingCode: '241', keepLeadingZero: false, currency: 'XAF', deposit: { min: 100, max: null, decimals: 0 }, payout: { min: 100, max: null, decimals: 0 } },
+    { correspondent: 'MOOV_GAB',     name: 'Moov Money',   country: 'GAB', countryName: 'Gabon',    flag: '🇬🇦', callingCode: '241', keepLeadingZero: false, currency: 'XAF', deposit: { min: 100, max: null, decimals: 0 }, payout: { min: 100, max: null, decimals: 0 } },
+    { correspondent: 'MTN_MOMO_CMR', name: 'MTN MoMo',     country: 'CMR', countryName: 'Cameroun', flag: '🇨🇲', callingCode: '237', keepLeadingZero: false, currency: 'XAF', deposit: { min: 100, max: null, decimals: 0 }, payout: { min: 100, max: null, decimals: 0 } },
+    { correspondent: 'ORANGE_CMR',   name: 'Orange Money', country: 'CMR', countryName: 'Cameroun', flag: '🇨🇲', callingCode: '237', keepLeadingZero: false, currency: 'XAF', deposit: { min: 100, max: null, decimals: 0 }, payout: { min: 100, max: null, decimals: 0 } },
   ];
 
-  function detectOperator(msisdn) {
-    let clean = msisdn.replace(/\s/g, '');
-    // Retirer le préfixe pays si présent (241 Gabon, 237 Cameroun)
-    if (clean.startsWith('241')) clean = '0' + clean.substring(3);
-    if (clean.startsWith('237')) clean = '0' + clean.substring(3);
-    for (const op of OPERATORS) {
-      for (const prefix of op.prefix) {
-        if (clean.startsWith(prefix)) return op;
-      }
+  const CHOICE_KEY = 'ndsgpos_choice';
+  let operators = [];             // liste complète reçue du serveur
+  let operatorsSource = 'loading'; // loading | live | stale | fallback | embedded
+  let selCountry = '';
+  let selOperator = null;
+  let manualPick = false;         // le caissier a choisi l'opérateur lui-même : la présélection du Gabon ne s'applique plus
+
+  const modeKey = () => (currentMode === 'collect' ? 'deposit' : 'payout');
+  const modeOperators = () => operators.filter((o) => !!o[modeKey()]);
+  const opKey = (o) => o.correspondent + '|' + o.currency;
+  const limitOf = (o) => (o ? o[modeKey()] : null);
+  const decimalsOf = () => { const l = limitOf(selOperator); return l && l.decimals ? l.decimals : 0; };
+  const fmtNumber = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(n);
+
+  async function loadOperators() {
+    updateBadge();
+    try {
+      const res  = await fetch(`${API}/pos/operators`, { headers: { 'Authorization': 'Bearer ' + posKey } });
+      const data = await res.json();
+      if (!res.ok || !data.success || !Array.isArray(data.operators) || !data.operators.length) throw new Error('liste indisponible');
+      operators = data.operators;
+      operatorsSource = data.source === 'fallback' ? 'fallback' : (data.stale ? 'stale' : 'live');
+    } catch (e) {
+      operators = EMBEDDED_OPERATORS;
+      operatorsSource = 'embedded';
     }
+    initSelections();
+  }
+
+  function readChoice() { try { return JSON.parse(localStorage.getItem(CHOICE_KEY) || 'null'); } catch (e) { return null; } }
+  function saveChoice() {
+    if (!selOperator) return;
+    try { localStorage.setItem(CHOICE_KEY, JSON.stringify({ country: selOperator.country, correspondent: selOperator.correspondent, currency: selOperator.currency })); } catch (e) { /* stockage indisponible */ }
+  }
+
+  // Dernier choix de cet appareil s'il est toujours possible, sinon le Gabon, sinon le premier pays de la liste.
+  function initSelections() {
+    const list = modeOperators();
+    const saved = readChoice();
+    let pick = saved && list.find((o) => o.country === saved.country && o.correspondent === saved.correspondent && o.currency === saved.currency);
+    if (!pick) pick = list.find((o) => o.country === 'GAB') || list[0] || null;
+    selCountry = pick ? pick.country : '';
+    selOperator = pick;
+    manualPick = false;
+    renderSelects();
+    applySelection();
+  }
+
+  function setOptions(select, items, selected) {
+    while (select.firstChild) select.removeChild(select.firstChild);
+    items.forEach((it) => { const o = document.createElement('option'); o.value = it.value; o.textContent = it.label; select.appendChild(o); });
+    if (selected !== undefined && selected !== null) select.value = selected;
+  }
+  function renderSelects() {
+    const list = modeOperators();
+    const seen = new Set(); const countries = [];
+    list.forEach((o) => { if (!seen.has(o.country)) { seen.add(o.country); countries.push(o); } });
+    setOptions(document.getElementById('country-select'), countries.map((o) => ({ value: o.country, label: o.flag + ' ' + o.countryName + ' (+' + o.callingCode + ')' })), selCountry);
+    setOptions(document.getElementById('operator-select'), list.filter((o) => o.country === selCountry).map((o) => ({ value: opKey(o), label: o.name + ' · ' + o.currency })), selOperator ? opKey(selOperator) : null);
+  }
+
+  function onCountryChange(iso) {
+    selCountry = iso;
+    selOperator = modeOperators().find((o) => o.country === iso) || null;
+    manualPick = false;
+    renderSelects(); applySelection(); saveChoice();
+  }
+  function onOperatorChange(key) {
+    selOperator = modeOperators().find((o) => o.country === selCountry && opKey(o) === key) || null;
+    manualPick = true;
+    applySelection(); saveChoice();
+  }
+
+  // Devise, indicatif, limites et touche « 000 » / « , » suivent l'opérateur choisi.
+  function applySelection() {
+    const o = selOperator;
+    document.getElementById('calling-code').textContent = o ? '+' + o.callingCode : '+';
+    document.getElementById('amount-currency').textContent = o ? o.currency : '';
+    const dec = decimalsOf();
+    document.getElementById('numpad-extra').textContent = dec > 0 ? ',' : '000';
+    if (amountRaw.includes('.')) amountRaw = dec > 0 ? amountRaw.replace(new RegExp('(\\.\\d{0,' + dec + '}).*'), '$1') : amountRaw.split('.')[0];
+    updateAmountDisplay();
+    updateBadge();
+  }
+
+  function updateBadge() {
+    const badge = document.getElementById('operator-badge');
+    const o = selOperator;
+    if (!o) {
+      badge.className = 'operator-badge unknown';
+      badge.textContent = operatorsSource === 'loading' ? 'Chargement des opérateurs…' : (operators.length ? 'Opération indisponible dans ce mode' : 'Aucun opérateur disponible');
+      return;
+    }
+    const l = limitOf(o);
+    let t = o.flag + ' ' + o.name;
+    if (l && (l.min || l.max)) t += ' · ' + [l.min ? 'min ' + fmtNumber(l.min) : '', l.max ? 'max ' + fmtNumber(l.max) : ''].filter(Boolean).join(' · ') + ' ' + o.currency;
+    if (operatorsSource === 'fallback' || operatorsSource === 'embedded') t += ' · liste non vérifiée';
+    badge.className = 'operator-badge detected';
+    badge.textContent = t;
+  }
+
+  // Numéro tel que le client le donne (avec ou sans « + », « 00 », indicatif, zéro national) → indicatif + chiffres.
+  // Le zéro du début est retiré, sauf là où il fait partie du numéro (Côte d'Ivoire, Bénin).
+  function nationalPart(raw, o) {
+    let d = String(raw || '').replace(/[\s.\-()]/g, '');
+    if (d.startsWith('+')) d = d.slice(1); else if (d.startsWith('00')) d = d.slice(2);
+    if (!/^\d*$/.test(d)) return null;
+    const cc = o.callingCode;
+    if (d.startsWith(cc) && d.length - cc.length >= 7) d = d.slice(cc.length);
+    if (!o.keepLeadingZero && d.startsWith('0')) d = d.slice(1);
+    return d;
+  }
+  function buildMsisdn(raw, o) {
+    const n = nationalPart(raw, o);
+    return n && /^\d{7,12}$/.test(n) ? o.callingCode + n : null;
+  }
+
+  // Gabon seulement : les premiers chiffres identifient l'opérateur de façon fiable (Airtel 74/76/77, Moov 60/62/65/66).
+  // Simple présélection : le caissier garde la main (manualPick).
+  const GABON_PREFIXES = { AIRTEL_GAB: ['74', '76', '77'], MOOV_GAB: ['60', '62', '65', '66'] };
+  function guessGabon(national) {
+    for (const corr of Object.keys(GABON_PREFIXES)) if (GABON_PREFIXES[corr].some((p) => national.startsWith(p))) return corr;
     return null;
   }
 
@@ -615,6 +737,7 @@
       posKeyId = localStorage.getItem('ndsgpos_keyid') || '';
       posScope = JSON.parse(localStorage.getItem('ndsgpos_scope') || '{"deposit":true,"payout":false}');
       enterPOS();
+      refreshSession();
     }
   });
 
@@ -651,7 +774,7 @@
       posLabel     = params.get('label') || data.label || 'Caisse POS';
       merchantName = params.get('merchant') || data.merchantName || '';
       posKeyId     = params.get('keyid') || data.posKeyId || '';
-      posScope     = { deposit: true, payout: false };
+      posScope     = data.scope ? { deposit: !!data.scope.deposit, payout: !!data.scope.payout } : { deposit: true, payout: false };
 
       localStorage.setItem('ndsgpos_key',      posKey);
       localStorage.setItem('ndsgpos_label',     posLabel);
@@ -670,14 +793,31 @@
   function enterPOS() {
     document.getElementById('pos-label').textContent    = posLabel;
     document.getElementById('pos-merchant').textContent = merchantName;
-
-    const payoutTab = document.getElementById('tab-payout');
-    if (posScope.payout && payoutTab) {
-      payoutTab.style.display = 'block';
-    }
-
+    applyScope();
     showScreen('pos');
     resetPOS();
+    loadOperators();
+  }
+
+  // L'onglet « Payout » n'apparaît que si le serveur confirme que la clé peut faire des payouts.
+  function applyScope() {
+    const payoutTab = document.getElementById('tab-payout');
+    if (payoutTab) payoutTab.style.display = posScope.payout ? 'block' : 'none';
+    if (!posScope.payout && currentMode === 'payout') setMode('collect');
+  }
+
+  // Permissions à jour : la clé a pu changer depuis la dernière ouverture de la caisse.
+  async function refreshSession() {
+    try {
+      const res = await fetch(`${API}/pos/validate`, { headers: { 'Authorization': 'Bearer ' + posKey } });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.scope) {
+        posScope = { deposit: !!data.scope.deposit, payout: !!data.scope.payout };
+        localStorage.setItem('ndsgpos_scope', JSON.stringify(posScope));
+        applyScope();
+      }
+    } catch (e) { /* hors ligne : on garde les permissions mémorisées */ }
   }
 
   // ── Navigation ────────────────────────────────────────────────
@@ -703,17 +843,22 @@
     }
     document.getElementById('pos-btn').textContent = mode === 'collect' ? 'Encaisser' : 'Envoyer';
     resetAmount();
+    if (operators.length) initSelections();   // la liste des opérateurs dépend du mode (collecte ou payout)
   }
 
   // ── Numpad ────────────────────────────────────────────────────
+  // Entiers pour la plupart des devises ; la touche « , » apparaît pour celles qui admettent des centimes (ex. USD).
   function numpad(val) {
+    const dec = decimalsOf();
     if (val === 'del') {
       amountRaw = amountRaw.slice(0, -1);
-    } else if (val === '000') {
-      if (amountRaw.length > 0) amountRaw += '000';
+    } else if (val === 'extra') {
+      if (dec > 0) { if (!amountRaw.includes('.')) amountRaw = (amountRaw === '' ? '0' : amountRaw) + '.'; }
+      else if (amountRaw.length > 0 && amountRaw.length + 3 <= 9) amountRaw += '000';
     } else {
       if (amountRaw === '0') amountRaw = '';
-      if (amountRaw.length >= 9) return;
+      if (amountRaw.includes('.')) { if (amountRaw.split('.')[1].length >= dec) return; }
+      else if (amountRaw.length >= 9) return;
       amountRaw += val;
     }
     updateAmountDisplay();
@@ -724,43 +869,45 @@
     updateAmountDisplay();
   }
 
+  function amountValue() {
+    const t = amountRaw.endsWith('.') ? amountRaw.slice(0, -1) : amountRaw;
+    return t ? Number(t) : 0;
+  }
+
   function updateAmountDisplay() {
-    const val = parseInt(amountRaw || '0');
-    document.getElementById('amount-display').textContent = new Intl.NumberFormat('fr-FR').format(val);
+    const raw = amountRaw || '0';
+    const parts = raw.split('.');
+    const whole = new Intl.NumberFormat('fr-FR').format(parseInt(parts[0] || '0', 10));
+    document.getElementById('amount-display').textContent = raw.includes('.') ? whole + ',' + (parts[1] || '') : whole;
   }
 
   // ── Numéro client ─────────────────────────────────────────────
   function onMsisdnChange(val) {
-    const badge = document.getElementById('operator-badge');
-    const op = detectOperator(val);
-    if (op) {
-      badge.className = 'operator-badge detected';
-      badge.textContent = op.flag + ' ' + op.name;
-      document.getElementById('amount-currency').textContent = op.currency;
-    } else {
-      badge.className = 'operator-badge unknown';
-      badge.textContent = '— Opérateur inconnu';
-      document.getElementById('amount-currency').textContent = 'XAF';
+    // Gabon : présélection de l'opérateur d'après les premiers chiffres, tant que le caissier n'a pas choisi lui-même.
+    if (selOperator && selOperator.country === 'GAB' && !manualPick) {
+      const n = nationalPart(val, selOperator);
+      const corr = n ? guessGabon(n) : null;
+      if (corr && corr !== selOperator.correspondent) {
+        const target = modeOperators().find((o) => o.country === 'GAB' && o.correspondent === corr);
+        if (target) { selOperator = target; renderSelects(); applySelection(); }
+      }
     }
   }
 
   // ── Transaction ───────────────────────────────────────────────
   async function initiateTx() {
-    const amount = parseInt(amountRaw || '0');
-    const msisdnRaw = document.getElementById('msisdn-input').value.replace(/\s/g, '');
-    const op        = detectOperator(msisdnRaw);
+    const o = selOperator;
+    if (!o) { showToast('Choisissez un pays et un opérateur'); return; }
+    const limit = limitOf(o);
+    if (!limit) { showToast('Opération indisponible pour cet opérateur'); return; }
+    const amount = amountValue();
+    if (!amount) { showToast('Saisissez un montant'); return; }
+    if (limit.min && amount < limit.min) { showToast('Montant minimum : ' + fmtNumber(limit.min) + ' ' + o.currency); return; }
+    if (limit.max && amount > limit.max) { showToast('Montant maximum : ' + fmtNumber(limit.max) + ' ' + o.currency); return; }
+    const msisdn = buildMsisdn(document.getElementById('msisdn-input').value, o);
+    if (!msisdn) { showToast('Numéro invalide'); return; }
 
-    // Ajouter le préfixe pays si absent
-    const msisdn = msisdnRaw.startsWith('241') || msisdnRaw.startsWith('237')
-      ? msisdnRaw
-      : (op?.currency === 'XAF' && msisdnRaw.startsWith('0')
-          ? (op?.correspondent?.includes('CMR') ? '237' : '241') + msisdnRaw.substring(1)
-          : '241' + msisdnRaw);
-
-    if (!amount || amount < 100) { showToast('Montant minimum : 100'); return; }
-    if (!msisdn || msisdn.length < 9) { showToast('Numéro invalide'); return; }
-    if (!op) { showToast('Opérateur non reconnu'); return; }
-
+    const op = { name: o.name, flag: o.flag, currency: o.currency, correspondent: o.correspondent, country: o.country };
     const btn = document.getElementById('pos-btn');
     btn.disabled = true;
     btn.textContent = 'Envoi...';
@@ -771,9 +918,9 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + posKey },
         body: JSON.stringify({
-          amount,
-          currency:      op.currency,
-          correspondent: op.correspondent,
+          amount:        limit.decimals > 0 ? amount.toFixed(limit.decimals) : amount,
+          currency:      o.currency,
+          correspondent: o.correspondent,
           msisdn,
           description: currentMode === 'collect' ? 'Paiement NDSGPay' : 'Virement NDSGPay'
         })
@@ -782,7 +929,7 @@
 
       if (data.success) {
         currentTxId = currentMode === 'collect' ? data.depositId : data.payoutId;
-        const txData = { amount, currency: op.currency, msisdn, operator: op.name, createdAt: new Date().toISOString() };
+        const txData = { amount, currency: o.currency, msisdn, operator: o.name, flag: o.flag, country: o.country, createdAt: new Date().toISOString() };
         showStatusScreen(amount, op, msisdn);
         startPolling(currentMode, currentTxId, txData);
       } else {
@@ -889,11 +1036,10 @@
   function resetPOS() {
     resetAmount();
     document.getElementById('msisdn-input').value = '';
-    document.getElementById('operator-badge').className   = 'operator-badge unknown';
-    document.getElementById('operator-badge').textContent = '— Opérateur inconnu';
+    manualPick = false;
     document.getElementById('pos-btn').disabled    = false;
     document.getElementById('pos-btn').textContent = currentMode === 'collect' ? 'Encaisser' : 'Envoyer';
-    document.getElementById('amount-currency').textContent = 'XAF';
+    updateBadge();
   }
 
   // ── Historique session ────────────────────────────────────────
@@ -904,13 +1050,49 @@
     sessionHistory.unshift(tx);
   }
 
+  // Les montants de devises différentes ne s'additionnent pas : un total par devise, une ligne chacun.
+  function totalsText(list) {
+    const t = {};
+    list.forEach((x) => { t[x.currency] = (t[x.currency] || 0) + Number(x.amount); });
+    const lines = Object.keys(t).sort().map((c) => fmtNumber(t[c]) + ' ' + c);
+    return lines.length ? lines.join('\n') : '0';
+  }
+
+  function renderRows(rows, emptyText) {
+    const list = document.getElementById('history-list');
+    while (list.firstChild) list.removeChild(list.firstChild);
+    if (!rows.length) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0';
+      empty.textContent = emptyText;
+      list.appendChild(empty);
+      return;
+    }
+    rows.forEach((r) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)';
+      const left = document.createElement('div');
+      const main = document.createElement('div'); main.style.cssText = 'font-size:13px;font-weight:500'; main.textContent = r.icon + ' ' + fmtNumber(r.amount) + ' ' + r.currency;
+      const sub  = document.createElement('div'); sub.style.cssText  = 'font-size:11px;color:var(--text-muted);margin-top:2px'; sub.textContent = r.sub;
+      left.appendChild(main); left.appendChild(sub);
+      const st = document.createElement('span');
+      st.style.cssText = 'font-size:16px;font-weight:700;color:' + (r.status === 'COMPLETED' ? 'var(--green)' : r.status === 'FAILED' ? 'var(--red)' : 'var(--orange)');
+      st.textContent = r.status === 'COMPLETED' ? '✓' : r.status === 'FAILED' ? '✗' : '…';
+      row.appendChild(left); row.appendChild(st);
+      list.appendChild(row);
+    });
+  }
+
+  const timeOf = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
   async function showHistory() {
-    const list  = document.getElementById('history-list');
-    const count = document.getElementById('history-count');
-    const totalCollect = document.getElementById('history-total-collect');
-    const totalPayout  = document.getElementById('history-total-payout');
     document.getElementById('history-modal').style.display = 'flex';
-    list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0">Chargement...</div>';
+    const list = document.getElementById('history-list');
+    while (list.firstChild) list.removeChild(list.firstChild);
+    const wait = document.createElement('div');
+    wait.style.cssText = 'color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0';
+    wait.textContent = 'Chargement...';
+    list.appendChild(wait);
 
     try {
       // Essayer l'API d'abord si on a le posKeyId
@@ -919,65 +1101,34 @@
           headers: { 'Authorization': 'Bearer ' + posKey }
         });
         const data = await res.json();
-        if (data.success) {
-          renderHistory(data.transactions, data.summary);
-          return;
-        }
+        if (data.success) { renderHistory(data.transactions || []); return; }
       }
-    } catch (e) { /* fallback sur mémoire */ }
-
-    // Fallback : historique en mémoire
-    const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
-    count.textContent = sessionHistory.length + ' transaction' + (sessionHistory.length > 1 ? 's' : '');
-    let sumCollect = 0, sumPayout = 0;
-    sessionHistory.forEach(tx => {
-      if (tx.status !== 'COMPLETED') return;
-      if (tx.mode === 'collect') sumCollect += tx.amount; else sumPayout += tx.amount;
-    });
-    totalCollect.textContent = fmt(sumCollect) + ' XAF';
-    totalPayout.textContent  = fmt(sumPayout)  + ' XAF';
-    if (sessionHistory.length === 0) {
-      list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0">Aucune transaction dans cette session</div>';
-    } else {
-      list.innerHTML = sessionHistory.map(tx => {
-        const icon  = tx.mode === 'collect' ? '📥' : '📤';
-        const color = tx.status === 'COMPLETED' ? 'var(--green)' : tx.status === 'FAILED' ? 'var(--red)' : 'var(--orange)';
-        const st    = tx.status === 'COMPLETED' ? '✓' : tx.status === 'FAILED' ? '✗' : '…';
-        const time  = new Date(tx.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
-          <div><div style="font-size:13px;font-weight:500">${icon} ${new Intl.NumberFormat('fr-FR').format(tx.amount)} ${tx.currency}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${tx.msisdn} · ${tx.operator} · ${time}</div></div>
-          <span style="font-size:16px;color:${color};font-weight:700">${st}</span></div>`;
-      }).join('');
-    }
+    } catch (e) { /* repli sur la mémoire de la session */ }
+    renderSessionHistory();
   }
 
-  function renderHistory(transactions, summary) {
-    const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
-    const count = document.getElementById('history-count');
-    const totalCollect = document.getElementById('history-total-collect');
-    const totalPayout  = document.getElementById('history-total-payout');
-    const list  = document.getElementById('history-list');
+  // Historique gardé en mémoire pour la session de la caisse
+  function renderSessionHistory() {
+    const done = sessionHistory.filter((t) => t.status === 'COMPLETED');
+    document.getElementById('history-count').textContent = sessionHistory.length + ' transaction' + (sessionHistory.length > 1 ? 's' : '');
+    document.getElementById('history-total-collect').textContent = totalsText(done.filter((t) => t.mode === 'collect'));
+    document.getElementById('history-total-payout').textContent  = totalsText(done.filter((t) => t.mode !== 'collect'));
+    renderRows(sessionHistory.map((tx) => ({
+      icon: tx.mode === 'collect' ? '📥' : '📤', amount: tx.amount, currency: tx.currency,
+      sub: [tx.msisdn, tx.operator, timeOf(tx.createdAt)].join(' · '), status: tx.status,
+    })), 'Aucune transaction dans cette session');
+  }
 
-    count.textContent = summary.count + ' transaction' + (summary.count > 1 ? 's' : '') + " aujourd'hui";
-    totalCollect.textContent = fmt(summary.totalCollect) + ' XAF';
-    totalPayout.textContent  = fmt(summary.totalPayout)  + ' XAF';
-
-    if (transactions.length === 0) {
-      list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0">Aucune transaction aujourd\'hui</div>';
-      return;
-    }
-
-    list.innerHTML = transactions.map(tx => {
-      const icon  = tx.type === 'deposit' ? '📥' : '📤';
-      const color = tx.status === 'COMPLETED' ? 'var(--green)' : tx.status === 'FAILED' ? 'var(--red)' : 'var(--orange)';
-      const st    = tx.status === 'COMPLETED' ? '✓' : tx.status === 'FAILED' ? '✗' : '…';
-      const time  = new Date(tx.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
-        <div><div style="font-size:13px;font-weight:500">${icon} ${fmt(tx.amount)} ${tx.currency}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${tx.msisdn} · ${tx.correspondent} · ${time}</div></div>
-        <span style="font-size:16px;color:${color};font-weight:700">${st}</span></div>`;
-    }).join('');
+  // Réponse du serveur (si la route est accessible avec cette clé)
+  function renderHistory(transactions) {
+    const done = transactions.filter((t) => t.status === 'COMPLETED');
+    document.getElementById('history-count').textContent = transactions.length + ' transaction' + (transactions.length > 1 ? 's' : '') + " aujourd'hui";
+    document.getElementById('history-total-collect').textContent = totalsText(done.filter((t) => t.type === 'deposit'));
+    document.getElementById('history-total-payout').textContent  = totalsText(done.filter((t) => t.type !== 'deposit'));
+    renderRows(transactions.map((tx) => ({
+      icon: tx.type === 'deposit' ? '📥' : '📤', amount: tx.amount, currency: tx.currency,
+      sub: [tx.msisdn, tx.correspondent, timeOf(tx.createdAt)].join(' · '), status: tx.status,
+    })), "Aucune transaction aujourd'hui");
   }
 
   function closeHistory() {
