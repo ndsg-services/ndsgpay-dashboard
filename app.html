@@ -2104,7 +2104,7 @@
         const volEl = document.getElementById('kpi-volume');
         if (volEl) volEl.innerHTML = currencies.map(cur => {
           const b = bbc[cur]; if (!b) return '';
-          const amt = new Intl.NumberFormat('fr-FR').format(Math.round(b.depositVolume + b.payoutVolume));
+          const amt = fmtMoney(b.depositVolume + b.payoutVolume, cur);
           return `<div style="font-size:${currencies.length > 2 ? '16px' : '20px'};line-height:1.5">${amt} <span style="font-size:11px;color:var(--text-muted)">${cur}</span></div>`;
         }).join('');
       } else {
@@ -2165,9 +2165,15 @@
     return new Intl.NumberFormat('fr-FR').format(Math.round(amount)) + ' XAF';
   }
 
+  // Devises avec centimes (comme le serveur) : un solde en USD s'affiche « 25,61 », jamais arrondi à l'entier.
+  const MONEY_DECIMALS = { USD: 2 };
+  function fmtMoney(amount, currency) {
+    const dec = MONEY_DECIMALS[currency] || 0;
+    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(dec ? Number(amount) : Math.round(amount));
+  }
   function formatAmount(amount, currency) {
     if (!amount || amount === 0) return `0 ${currency}`;
-    return new Intl.NumberFormat('fr-FR').format(Math.round(amount)) + ` ${currency}`;
+    return fmtMoney(amount, currency) + ` ${currency}`;
   }
 
   function renderMultiCurrencyBalances(balancesByCurrency, currencies, balancesByCorrespondent, correspondents) {
@@ -2180,7 +2186,7 @@
         feesEl.innerHTML = currencies.map(cur => {
           const b = balancesByCurrency[cur];
           if (!b) return '';
-          const amt = new Intl.NumberFormat('fr-FR').format(Math.round(b.availableBalance));
+          const amt = fmtMoney(b.availableBalance, cur);
           return `<div style="font-size:${currencies.length > 2 ? '16px' : '20px'};line-height:1.5">${amt} <span style="font-size:11px;color:var(--text-muted)">${cur}</span></div>`;
         }).join('');
       } else {
@@ -2815,7 +2821,7 @@
             <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${b.currency}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:15px;font-weight:700;color:var(--success)">${new Intl.NumberFormat('fr-FR').format(b.availableBalance)} ${b.currency}</div>
+            <div style="font-size:15px;font-weight:700;color:var(--success)">${fmtMoney(b.availableBalance, b.currency)} ${b.currency}</div>
             <div style="font-size:11px;color:var(--text-muted)">disponible</div>
           </div>
         </div>`).join('');
@@ -2953,7 +2959,7 @@ let retraitBalancesByCurrency = {};  // soldes disponibles par devise (statistiq
           if (currencies.length > 1) {
             balEl.innerHTML = currencies.map(cur => {
               const b = bbc[cur]; if (!b) return '';
-              return `<div style="font-size:20px;line-height:1.5">${new Intl.NumberFormat('fr-FR').format(Math.round(b.availableBalance))} <span style="font-size:11px;color:var(--text-muted)">${cur}</span></div>`;
+              return `<div style="font-size:20px;line-height:1.5">${fmtMoney(b.availableBalance, cur)} <span style="font-size:11px;color:var(--text-muted)">${cur}</span></div>`;
             }).join('');
           } else {
             const b = bbc[currencies[0]];
@@ -3101,7 +3107,7 @@ let retraitBalancesByCurrency = {};  // soldes disponibles par devise (statistiq
     if (!o) { el.textContent = ''; return; }
     const b = retraitBalancesByCurrency[o.currency];
     el.textContent = b && b.availableBalance > 0
-      ? 'Solde disponible en ' + o.currency + ' : ' + fmtNum(b.availableBalance)
+      ? 'Solde disponible en ' + o.currency + ' : ' + fmtMoney(b.availableBalance, o.currency)
       : 'Aucun solde disponible en ' + o.currency + ' : un retrait n’est pas possible.';
   }
 

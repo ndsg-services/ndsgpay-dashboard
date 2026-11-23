@@ -25,7 +25,9 @@ const OPS = [
   O('VODACOM_MPESA_COD', 'Vodacom M-Pesa', 'COD', 'RD Congo', '🇨🇩', '243', 'USD', L(0.5, 2500, 2), L(0.5, 2500, 2)),
   O('ORANGE_SEN', 'Orange Money', 'SEN', 'Sénégal', '🇸🇳', '221', 'XOF', L(2, 100000000), null),   // collecte seule : pas de retrait possible
 ];
-const STATS = { success: true, stats: { currencies: ['XAF', 'USD'], balancesByCurrency: { XAF: { currency: 'XAF', availableBalance: 250000 }, USD: { currency: 'USD', availableBalance: 12.5 } }, balancesByCorrespondent: {}, correspondents: [] } };
+const STATS = { success: true, stats: { currencies: ['XAF', 'USD', 'CDF'], balancesByCurrency: { XAF: { currency: 'XAF', depositVolume: 300000, payoutVolume: 50000, availableBalance: 250000 }, USD: { currency: 'USD', depositVolume: 25.6, payoutVolume: 10, availableBalance: 12.5 }, CDF: { currency: 'CDF', depositVolume: 1000, payoutVolume: 0, availableBalance: 970 } },
+  balancesByCorrespondent: { AIRTEL_GAB: { correspondent: 'AIRTEL_GAB', country: 'Gabon', flag: '🇬🇦', currency: 'XAF', availableBalance: 250000 }, AIRTEL_COD: { correspondent: 'AIRTEL_COD', country: 'RDC', flag: '🇨🇩', currency: 'CDF', availableBalance: 970 }, 'AIRTEL_COD|USD': { correspondent: 'AIRTEL_COD', country: 'RDC', flag: '🇨🇩', currency: 'USD', availableBalance: 14.63 } },
+  correspondents: ['AIRTEL_GAB', 'AIRTEL_COD', 'AIRTEL_COD|USD'] } };
 
 function load({ cfg = {} } = {}) {
   const calls = []; const errors = []; const vc = new VirtualConsole(); vc.on('jsdomError', (e) => { if (!/navigation to another Document/.test(e.message)) errors.push(e.message); });
@@ -97,11 +99,11 @@ function load({ cfg = {} } = {}) {
   check('USD : limites 0,1 à 2 500 USD', norm(p.$('retrait-limits').textContent) === 'Min : 0,1 USD — Max : 2 500 USD', p.$('retrait-limits').textContent);
   check('USD : le champ accepte les centimes (pas 0,01) avec min et max', p.$('retrait-amount').step === '0.01' && p.$('retrait-amount').min === '0.1' && p.$('retrait-amount').max === '2500', [p.$('retrait-amount').step, p.$('retrait-amount').min, p.$('retrait-amount').max]);
   check('RDC : indicatif +243 rappelé', /\+243/.test(p.$('retrait-msisdn-hint').textContent) && p.$('retrait-msisdn').placeholder.startsWith('243'));
-  check('solde affiché dans la devise choisie (USD)', norm(p.$('retrait-selected-balance').textContent) === 'Solde disponible en USD : 12,5', p.$('retrait-selected-balance').textContent);
+  check('solde affiché dans la devise choisie (USD), avec ses centimes', norm(p.$('retrait-selected-balance').textContent) === 'Solde disponible en USD : 12,50', p.$('retrait-selected-balance').textContent);
   p.pick('AIRTEL_COD|CDF'); check('CDF : devise, entiers seulement, limites 100 à 6 250 000', p.$('retrait-amount-label').textContent === 'Montant (CDF)' && p.$('retrait-amount').step === '1' && /Min : 100 CDF — Max : 6 250 000 CDF/.test(norm(p.$('retrait-limits').textContent)), p.$('retrait-limits').textContent);
-  check('CDF : aucun solde en CDF → message clair', /Aucun solde disponible en CDF/.test(p.$('retrait-selected-balance').textContent), p.$('retrait-selected-balance').textContent);
+  check('CDF : solde de 970 CDF affiché, entier', norm(p.$('retrait-selected-balance').textContent) === 'Solde disponible en CDF : 970', p.$('retrait-selected-balance').textContent);
   p.pick('AIRTEL_GAB|XAF'); check('XAF : solde 250 000 affiché', norm(p.$('retrait-selected-balance').textContent) === 'Solde disponible en XAF : 250 000', p.$('retrait-selected-balance').textContent);
-  p.pick('MPESA_KEN|KES'); check('Kenya : KES et minimum du payout (10), pas celui de la collecte (1)', p.$('retrait-amount-label').textContent === 'Montant (KES)' && /Min : 10 KES/.test(p.$('retrait-limits').textContent), p.$('retrait-limits').textContent);
+  p.pick('MPESA_KEN|KES'); check('Kenya : aucun solde en KES → message clair', /Aucun solde disponible en KES/.test(p.$('retrait-selected-balance').textContent), p.$('retrait-selected-balance').textContent); check('Kenya : KES et minimum du payout (10), pas celui de la collecte (1)', p.$('retrait-amount-label').textContent === 'Montant (KES)' && /Min : 10 KES/.test(p.$('retrait-limits').textContent), p.$('retrait-limits').textContent);
   p.pick(''); check('retour à « Choisir » : libellé, limites et solde remis à zéro', p.$('retrait-amount-label').textContent === 'Montant (XAF)' && /Choisissez/.test(p.$('retrait-limits').textContent) && p.$('retrait-selected-balance').textContent === '');
   p.pick('AIRTEL_COD|USD'); await p.open(); check('rechargement du panneau : le choix d\'opérateur est conservé', p.$('retrait-correspondent').value === 'AIRTEL_COD|USD' && p.$('retrait-amount-label').textContent === 'Montant (USD)');
 
@@ -173,7 +175,24 @@ function load({ cfg = {} } = {}) {
   p = load({ cfg: { ops: OPS.map((o) => (o.correspondent === 'MOOV_GAB' ? { ...o, name: evil, countryName: evil, correspondent: evil } : o)) } }); await p.apiCorr();
   check('noms hostiles dans le tableau : texte seulement, aucun élément injecté', p.doc.querySelectorAll('#api-corr-body img').length === 0 && !p.win.__pwned && p.$('api-corr-body').textContent.includes(evil));
 
-  group('F. Contrôles du code');
+  group('F. Soldes au centime');
+  p = load(); await p.open();
+  const balLines = [...p.$('retrait-balance').children].map((d) => norm(d.textContent).replace(/\s+/g, ' ').trim());
+  check('solde total par devise : l\'USD garde ses centimes, XAF et CDF restent entiers', JSON.stringify(balLines) === JSON.stringify(['250 000 XAF', '12,50 USD', '970 CDF']), balLines);
+  const rowsB = [...p.$('retrait-corr-balances').querySelectorAll('tbody tr')].map((tr) => norm(tr.textContent).replace(/\s+/g, ' ').trim());
+  check('RDC : Airtel en CDF et Airtel en USD sur deux lignes séparées (970 CDF / 14,63 USD)', rowsB.length === 3 && /AIRTEL_COD 970 CDF/.test(rowsB[1]) && /AIRTEL_COD 14,63 USD/.test(rowsB[2]), rowsB);
+  check('aucune clé technique « code|devise » affichée à l\'écran', !/\|/.test(p.$('retrait-corr-balances').textContent));
+  const fm = (a, c) => norm(p.win.formatAmount(a, c));
+  check('formatAmount : 25,6 USD → « 25,60 USD » ; 0 → « 0 USD » ; 1 000,4 XAF → « 1 000 XAF »', fm(25.6, 'USD') === '25,60 USD' && fm(0, 'USD') === '0 USD' && fm(1000.4, 'XAF') === '1 000 XAF' && fm(14.63, 'USD') === '14,63 USD', [fm(25.6, 'USD'), fm(0, 'USD'), fm(1000.4, 'XAF')]);
+  check('fmtMoney : USD toujours 2 décimales ; CDF, XOF, KES entiers', norm(p.win.fmtMoney(25.6, 'USD')) === '25,60' && norm(p.win.fmtMoney(970, 'CDF')) === '970' && norm(p.win.fmtMoney(5.4, 'KES')) === '5');
+  p.win.renderMultiCurrencyBalances(STATS.stats.balancesByCurrency, ['XAF', 'USD'], STATS.stats.balancesByCorrespondent, STATS.stats.correspondents);
+  check('vue d\'ensemble : « Solde disponible » en USD avec centimes', /12,50/.test(norm(p.$('kpi-fees').textContent)) && /250 000/.test(norm(p.$('kpi-fees').textContent)), norm(p.$('kpi-fees').textContent));
+  p.win.eval("jwtToken = 'tok-test'"); await p.win.loadStats(); await flush();
+  const vol = [...p.$('kpi-volume').children].map((d) => norm(d.textContent).replace(/\s+/g, ' ').trim());
+  check('vue d\'ensemble : le volume par devise garde les centimes de l\'USD (35,60 USD) ; XAF entier', vol.includes('35,60 USD') && vol.includes('350 000 XAF') && vol.includes('1 000 CDF'), vol);
+  check('plus aucun arrondi à l\'entier d\'un solde dans la page', !/Math\.round\(b\.availableBalance\)/.test(HTML) && !/Intl\.NumberFormat\('fr-FR'\)\.format\(b\.availableBalance\)/.test(HTML));
+
+  group('G. Contrôles du code');
   const fn = HTML.slice(HTML.indexOf('async function loadRetraitOperators'), HTML.indexOf('function exportRetraitCSV'));
   check('les nouvelles fonctions n\'injectent aucun HTML venu du serveur (ni innerHTML ni outerHTML)', fn.length > 3000 && !/innerHTML|outerHTML|insertAdjacentHTML/.test(fn));
   check('plus de devise XAF écrite en dur dans l\'envoi ni dans le calcul du maximum', !/currency:\s*'XAF',\s*correspondent/.test(HTML) && !/currency=XAF/.test(HTML));
