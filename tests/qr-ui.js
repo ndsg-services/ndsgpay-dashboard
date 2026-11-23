@@ -113,6 +113,20 @@ function matrixCheck(svg, url) {
   const fn = HTML.slice(HTML.indexOf('function renderQR'), HTML.indexOf('function setQRMessage'));
   check('le dessin du QR n\'injecte aucun HTML (ni innerHTML ni outerHTML)', fn.length > 200 && !/innerHTML|outerHTML|insertAdjacentHTML/.test(fn));
 
+  // Une animation de panneau qui garde son état final (fill-mode both/forwards) avec un transform fait calculer la position
+  // des fenêtres « position:fixed » par rapport au panneau au lieu de l'écran : la fenêtre se décale et son haut est coupé.
+  const css = HTML.slice(HTML.indexOf('<style'), HTML.indexOf('</style>'));
+  const keyframes = {}; for (const m of css.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g)) keyframes[m[1]] = m[2];
+  const offenders = [];
+  for (const m of css.matchAll(/([^{}@]+)\{([^{}]*\banimation\s*:[^;}]*)[;}]?/g)) {
+    const decl = (m[2].match(/\banimation\s*:\s*([^;}]*)/) || [])[1] || ''; const name = decl.split(/\s+/).find((x) => keyframes[x]);
+    if (name && /\b(both|forwards)\b/.test(decl) && /transform|filter|perspective/.test(keyframes[name])) offenders.push(m[1].trim() + ' → ' + decl.trim());
+  }
+  check('aucune animation ne garde un « transform » après son déroulement (sinon les fenêtres se centrent sur le panneau)', offenders.length === 0, offenders);
+  const panelRule = (css.match(/\.panel\.active\s*\{[^}]*animation[^}]*\}/) || [''])[0];   // il y a deux règles .panel.active : on prend celle de l'animation
+  check('l\'apparition des panneaux est conservée (animation fadeIn de 0,3 s)', /animation:\s*fadeIn\s+0\.3s\s+ease\s+backwards/.test(panelRule), panelRule);
+  check('la fenêtre du QR est dans un panneau animé : la règle ci-dessus la protège', /id="panel-poskeys"/.test(HTML) && HTML.indexOf('id="poskey-qr-modal"') > HTML.indexOf('id="panel-poskeys"'));
+
   for (const g of groups) log(`${g.fails.length ? '✗' : '✓'} ${g.n.padEnd(58)} ${g.pass} réussis${g.fails.length ? ', ' + g.fails.length + ' ÉCHEC(S)' : ''}`);
   log(`\n${ok} / ${total} vérifications réussies`);
   if (ok !== total) { log('\nÉCHECS :'); groups.forEach((g) => g.fails.forEach((f) => log(`  ✗ [${g.n}] ${f}`))); }
