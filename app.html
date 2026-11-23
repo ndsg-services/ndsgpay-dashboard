@@ -1078,17 +1078,18 @@
 
         <div class="api-section">
           <div class="api-section-title">Correspondants disponibles</div>
+<div id="api-corr-note" style="font-size:12px;color:var(--text-muted);margin:-4px 0 10px"></div>
           <div class="api-key-card">
-            <table>
-              <thead>
-                <tr>
-                  <th>Pays</th>
+            <table id="api-corr-table">
+<thead id="api-corr-head">
+<tr>
+<th>Pays</th>
                   <th data-i18n="col-operator">Opérateur</th>
                   <th>Code correspondent</th>
                   <th>Devise</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="api-corr-body">
                 <tr><td>🇬🇦 Gabon</td><td>Airtel Money</td><td class="td-mono">AIRTEL_GAB</td><td>XAF</td></tr>
                 <tr><td>🇬🇦 Gabon</td><td>Moov Money</td><td class="td-mono">MOOV_GAB</td><td>XAF</td></tr>
                 <tr><td>🇨🇲 Cameroun</td><td>MTN MoMo</td><td class="td-mono">MTN_MOMO_CMR</td><td>XAF</td></tr>
@@ -1153,28 +1154,23 @@
 
               <div style="margin-bottom:14px">
                 <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Opérateur</div>
-                <select id="retrait-correspondent" onchange="onRetraitCorrChange()" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);border:1px solid var(--border);outline:none">
-                  <option value="">— Choisir</option>
-                  <option value="AIRTEL_GAB">🇬🇦 Airtel Money Gabon</option>
-                  <option value="MOOV_GAB">🇬🇦 Moov Money Gabon</option>
-                  <option value="MTN_MOMO_CMR">🇨🇲 MTN Mobile Money CMR</option>
-                  <option value="ORANGE_CMR">🇨🇲 Orange Money CMR</option>
-                </select>
+                <select id="retrait-correspondent" onchange="onRetraitCorrChange()" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);border:1px solid var(--border);outline:none"><option value="">— Choisir</option></select>
               </div>
 
               <div style="margin-bottom:14px">
                 <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Numéro mobile</div>
                 <input type="tel" id="retrait-msisdn" placeholder="24174709401" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:monospace;background:var(--white);color:var(--text);border:1px solid var(--border);outline:none;box-sizing:border-box"/>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Préfixe pays sans 0 (ex: 24174XXXXXX)</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:3px"><span id="retrait-msisdn-hint">Choisissez d’abord un opérateur</span></div>
               </div>
 
               <div style="margin-bottom:14px">
-                <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Montant (XAF)</div>
-                <input type="number" id="retrait-amount" placeholder="5000" min="100" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);border:1px solid var(--border);outline:none;box-sizing:border-box"/>
+                <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em"><span id="retrait-amount-label">Montant (XAF)</span></div>
+                <input type="number" id="retrait-amount" placeholder="5000" step="any" class="tx-search" style="width:100%;padding:8px 10px;border-radius:8px;font-size:13px;font-family:var(--sans);background:var(--white);color:var(--text);border:1px solid var(--border);outline:none;box-sizing:border-box"/>
                 <div style="display:flex;justify-content:space-between;margin-top:3px">
                   <span style="font-size:11px;color:var(--text-muted)" id="retrait-limits">Min : 100 XAF</span>
                   <span style="font-size:11px;color:var(--blue);cursor:pointer" onclick="retraitToutRetirer()">Tout retirer</span>
                 </div>
+<div id="retrait-selected-balance" style="font-size:11px;color:var(--text-muted);margin-top:3px"></div>
               </div>
 
               <div style="margin-bottom:20px">
@@ -1508,6 +1504,7 @@
     if (name === 'releve') loadReleve();
     if (name === 'withdrawals') loadWithdrawals();
     if (name === 'retrait') loadRetraitPanel();
+      if (name === 'apikeys') loadApiCorrespondents();
     if (name === 'team') loadTeam();
     if (name === 'poskeys') loadPosKeys();
     if (name === 'settings') { loadSettingsPanel(); loadWebhookLog(); }
@@ -2930,9 +2927,12 @@
   });
 
   // ── RETRAIT ──────────────────────────────────────────────────
-  let retraitLimits = {};
-  let retraitBalance = 0;
+    let retraitBalance = 0;
   let retraitWithdrawals = [];
+let retraitOps = [];                 // opérateurs avec payout, activés sur le compte (liste fournie par le serveur)
+let retraitOpsSource = 'loading';    // live | stale | fallback | embedded
+let retraitSel = null;               // entrée choisie (opérateur + devise)
+let retraitBalancesByCurrency = {};  // soldes disponibles par devise (statistiques)
 
   async function loadRetraitPanel() {
     // Réutiliser les données de stats déjà chargées
@@ -2945,6 +2945,7 @@
         const s = data.stats;
         const currencies = s.currencies || ['XAF'];
         const bbc = s.balancesByCurrency || {};
+      retraitBalancesByCurrency = bbc;
 
         // Solde total
         const balEl = document.getElementById('retrait-balance');
@@ -2987,18 +2988,9 @@
       }
     } catch (e) { console.error('Retrait stats error:', e); }
 
-    // Limites opérateur
-    try {
-      const r = await apiFetch(API + '/merchant/correspondent-limits', {
-        headers: { 'Authorization': `Bearer ${jwtToken}` }
-      });
-      const d = await r.json();
-      if (d.success) {
-        retraitLimits = d.limits || {};
-        // Mettre à jour l'affichage des limites si un opérateur est déjà sélectionné
-        onRetraitCorrChange();
-      }
-    } catch (e) { console.error('Limits error:', e); }
+    // Opérateurs activés sur le compte (avec leurs devises et limites), puis solde de la devise choisie
+    await loadRetraitOperators();
+    updateRetraitSelectedBalance();
 
     // Historique
     await loadRetraitHistory();
@@ -3039,43 +3031,116 @@
     el.innerHTML = '<table><thead><tr><th>Opérateur</th><th>Numéro</th><th>Montant</th><th>Statut</th><th>Date</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  function onRetraitCorrChange() {
-    const corr = document.getElementById('retrait-correspondent').value;
-    const limEl = document.getElementById('retrait-limits');
-    if (corr && retraitLimits[corr]?.payout) {
-      const { min, max } = retraitLimits[corr].payout;
-      const fmt = n => new Intl.NumberFormat('fr-FR').format(n);
-      limEl.textContent = `Min : ${fmt(min)} XAF — Max : ${fmt(max)} XAF`;
-      document.getElementById('retrait-amount').min = min;
-      document.getElementById('retrait-amount').max = max;
-    } else {
-      limEl.textContent = 'Min : 100 XAF';
+  // ── Opérateurs du retrait : liste fournie par le serveur ─────────────────────
+  // Comme la caisse : ce que NDSGPay sait traiter ET qui est activé sur le compte, par devise, avec limites et décimales.
+  const RETRAIT_FALLBACK = [
+    { correspondent: 'AIRTEL_GAB',   name: 'Airtel Money', country: 'GAB', countryName: 'Gabon',    flag: '🇬🇦', callingCode: '241', keepLeadingZero: false, currency: 'XAF', payout: { min: 100, max: null, decimals: 0 } },
+    { correspondent: 'MOOV_GAB',     name: 'Moov Money',   country: 'GAB', countryName: 'Gabon',    flag: '🇬🇦', callingCode: '241', keepLeadingZero: false, currency: 'XAF', payout: { min: 100, max: null, decimals: 0 } },
+    { correspondent: 'MTN_MOMO_CMR', name: 'MTN MoMo',     country: 'CMR', countryName: 'Cameroun', flag: '🇨🇲', callingCode: '237', keepLeadingZero: false, currency: 'XAF', payout: { min: 100, max: null, decimals: 0 } },
+    { correspondent: 'ORANGE_CMR',   name: 'Orange Money', country: 'CMR', countryName: 'Cameroun', flag: '🇨🇲', callingCode: '237', keepLeadingZero: false, currency: 'XAF', payout: { min: 100, max: null, decimals: 0 } },
+  ];
+  const retraitKey = (o) => o.correspondent + '|' + o.currency;
+  const fmtNum = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(n);
+
+  async function loadRetraitOperators() {
+    try {
+      const r = await apiFetch(API + '/pos/operators', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      const d = await r.json();
+      if (!r.ok || !d.success || !Array.isArray(d.operators)) throw new Error('liste indisponible');
+      const list = d.operators.filter((o) => !!o.payout);
+      if (!list.length) throw new Error('aucun opérateur avec payout');
+      retraitOps = list;
+      retraitOpsSource = d.source === 'fallback' ? 'fallback' : (d.stale ? 'stale' : 'live');
+    } catch (e) {
+      retraitOps = RETRAIT_FALLBACK;
+      retraitOpsSource = 'embedded';
     }
+    renderRetraitOperators();
+  }
+
+  function renderRetraitOperators() {
+    const select = document.getElementById('retrait-correspondent');
+    const previous = select.value;
+    while (select.firstChild) select.removeChild(select.firstChild);
+    const first = document.createElement('option'); first.value = ''; first.textContent = '— Choisir'; select.appendChild(first);
+    let group = null; let groupIso = '';
+    retraitOps.forEach((o) => {
+      if (o.country !== groupIso) {
+        group = document.createElement('optgroup'); group.label = o.flag + ' ' + o.countryName; select.appendChild(group); groupIso = o.country;
+      }
+      const opt = document.createElement('option'); opt.value = retraitKey(o); opt.textContent = o.name + ' · ' + o.currency; group.appendChild(opt);
+    });
+    if (previous && retraitOps.some((o) => retraitKey(o) === previous)) select.value = previous;
+    onRetraitCorrChange();
+  }
+
+  // Devise, indicatif, limites et solde suivent l'opérateur choisi.
+  function onRetraitCorrChange() {
+    const value = document.getElementById('retrait-correspondent').value;
+    retraitSel = retraitOps.find((o) => retraitKey(o) === value) || null;
+    const o = retraitSel; const amountEl = document.getElementById('retrait-amount'); const limEl = document.getElementById('retrait-limits');
+    document.getElementById('retrait-amount-label').textContent = 'Montant (' + (o ? o.currency : 'XAF') + ')';
+    document.getElementById('retrait-msisdn-hint').textContent = o ? 'Avec ou sans l’indicatif (+' + o.callingCode + '), sans le 0 du début' : 'Choisissez d’abord un opérateur';
+    document.getElementById('retrait-msisdn').placeholder = o ? o.callingCode + '…' : '24174709401';
+    if (o && o.payout) {
+      const l = o.payout; const dec = l.decimals || 0;
+      amountEl.min = l.min || ''; amountEl.max = l.max || ''; amountEl.step = dec > 0 ? String(Math.pow(10, -dec)) : '1';
+      let t = 'Min : ' + fmtNum(l.min || 0) + ' ' + o.currency + (l.max ? ' — Max : ' + fmtNum(l.max) + ' ' + o.currency : '');
+      if (retraitOpsSource === 'fallback' || retraitOpsSource === 'embedded') t += ' — liste non vérifiée';
+      limEl.textContent = t;
+    } else {
+      amountEl.removeAttribute('min'); amountEl.removeAttribute('max'); amountEl.step = 'any';
+      limEl.textContent = 'Choisissez un opérateur';
+    }
+    updateRetraitSelectedBalance();
+  }
+
+  function updateRetraitSelectedBalance() {
+    const el = document.getElementById('retrait-selected-balance'); if (!el) return;
+    const o = retraitSel;
+    if (!o) { el.textContent = ''; return; }
+    const b = retraitBalancesByCurrency[o.currency];
+    el.textContent = b && b.availableBalance > 0
+      ? 'Solde disponible en ' + o.currency + ' : ' + fmtNum(b.availableBalance)
+      : 'Aucun solde disponible en ' + o.currency + ' : un retrait n’est pas possible.';
+  }
+
+  // Numéro tel que l'utilisateur le donne (« + », « 00 », indicatif, zéro national) → indicatif + chiffres.
+  // Le zéro du début est retiré, sauf là où il fait partie du numéro (Côte d'Ivoire, Bénin).
+  function retraitBuildMsisdn(raw, o) {
+    let d = String(raw || '').replace(/[\s.\-()]/g, '');
+    if (d.startsWith('+')) d = d.slice(1); else if (d.startsWith('00')) d = d.slice(2);
+    if (!/^\d*$/.test(d)) return null;
+    const cc = o.callingCode;
+    if (d.startsWith(cc) && d.length - cc.length >= 7) d = d.slice(cc.length);
+    if (!o.keepLeadingZero && d.startsWith('0')) d = d.slice(1);
+    return /^\d{7,12}$/.test(d) ? cc + d : null;
   }
 
   // Remplit le montant avec le MAXIMUM réellement retirable : le frais NDSGPay dépend de
-  // l'opérateur choisi, donc on demande le calcul au serveur (solde − frais).
+  // l'opérateur choisi, donc on demande le calcul au serveur (solde − frais), dans la devise choisie.
   async function retraitToutRetirer() {
     const errEl = document.getElementById('retrait-error');
-    const corr = document.getElementById('retrait-correspondent').value;
+    const o = retraitSel;
     const showErr = (msg) => { errEl.textContent = msg; errEl.style.display = 'block'; };
     errEl.style.display = 'none';
 
-    if (!corr) { showErr('Choisissez d\'abord un opérateur : le maximum dépend de ses frais.'); return; }
+    if (!o) { showErr('Choisissez d\'abord un opérateur : le maximum dépend de ses frais.'); return; }
 
     try {
-      const r = await apiFetch(`${API}/merchant/withdrawal-max?correspondent=${encodeURIComponent(corr)}&currency=XAF`, {
+      const r = await apiFetch(`${API}/merchant/withdrawal-max?correspondent=${encodeURIComponent(o.correspondent)}&currency=${encodeURIComponent(o.currency)}`, {
         headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const d = await r.json();
       if (!d.success) { showErr(d.error || 'Impossible de calculer le maximum.'); return; }
 
-      // Ne pas dépasser non plus le plafond de l'opérateur
-      const opMax = retraitLimits[corr]?.payout?.max;
-      const max = opMax ? Math.min(d.max, opMax) : d.max;
+      // Ne pas dépasser non plus le plafond de l'opérateur ; arrondi vers le bas à la précision de la devise
+      const opMax = o.payout && o.payout.max;
+      const dec = (o.payout && o.payout.decimals) || 0; const k = Math.pow(10, dec);
+      const max = Math.floor((opMax ? Math.min(d.max, opMax) : d.max) * k + 1e-9) / k;
 
       if (max > 0) {
-        document.getElementById('retrait-amount').value = max;
+        document.getElementById('retrait-amount').value = dec > 0 ? max.toFixed(dec) : max;
       } else {
         showErr('Solde insuffisant pour un retrait (frais NDSGPay inclus).');
       }
@@ -3087,16 +3152,27 @@
   async function submitRetrait() {
     const btn = document.getElementById('retrait-btn');
     const errEl = document.getElementById('retrait-error');
-    const correspondent = document.getElementById('retrait-correspondent').value;
-    const msisdn = document.getElementById('retrait-msisdn').value.trim();
+    const o = retraitSel;
+    const msisdnRaw = document.getElementById('retrait-msisdn').value.trim();
     const amount = document.getElementById('retrait-amount').value;
     const description = document.getElementById('retrait-description').value || 'Retrait NDSGPay';
+    const fail = (msg) => { errEl.textContent = msg; errEl.style.display = 'block'; };
 
     errEl.style.display = 'none';
 
-    if (!correspondent) { errEl.textContent = 'Choisissez un opérateur.'; errEl.style.display = 'block'; return; }
-    if (!msisdn) { errEl.textContent = 'Numéro mobile requis.'; errEl.style.display = 'block'; return; }
-    if (!amount || parseFloat(amount) < 100) { errEl.textContent = 'Montant minimum : 100 XAF.'; errEl.style.display = 'block'; return; }
+    if (!o) { fail('Choisissez un opérateur.'); return; }
+    if (!msisdnRaw) { fail('Numéro mobile requis.'); return; }
+    const msisdn = retraitBuildMsisdn(msisdnRaw, o);
+    if (!msisdn) { fail('Numéro invalide.'); return; }
+
+    // Montant : limites et précision propres à l'opérateur et à sa devise (plus de minimum fixe de 100 XAF)
+    const l = o.payout || {}; const dec = l.decimals || 0; const n = parseFloat(amount);
+    if (!amount || !(n > 0)) { fail('Saisissez un montant.'); return; }
+    if (l.min && n < l.min) { fail('Montant minimum : ' + fmtNum(l.min) + ' ' + o.currency + '.'); return; }
+    if (l.max && n > l.max) { fail('Montant maximum : ' + fmtNum(l.max) + ' ' + o.currency + '.'); return; }
+    if (!new RegExp('^\\d+(\\.\\d{1,' + Math.max(dec, 1) + '})?$').test(amount) || (dec === 0 && amount.includes('.'))) {
+      fail(dec === 0 ? 'Montant entier requis en ' + o.currency + '.' : 'Au plus ' + dec + ' décimales en ' + o.currency + '.'); return;
+    }
 
     btn.disabled = true;
     btn.textContent = 'Envoi...';
@@ -3105,7 +3181,7 @@
       const r = await apiFetch(API + '/merchant/withdrawal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwtToken },
-        body: JSON.stringify({ amount, currency: 'XAF', correspondent, msisdn, description })
+        body: JSON.stringify({ amount: dec > 0 ? n.toFixed(dec) : amount, currency: o.currency, correspondent: o.correspondent, msisdn, description })
       });
       const d = await r.json();
       if (d.success) {
@@ -3116,17 +3192,48 @@
         // Recharger le panel pour mettre à jour les soldes
         await loadRetraitPanel();
       } else {
-        errEl.textContent = d.error || 'Erreur lors du retrait.';
-        errEl.style.display = 'block';
+        fail(d.error || 'Erreur lors du retrait.');
         btn.disabled = false;
         btn.textContent = 'Initier le retrait';
       }
     } catch (e) {
-      errEl.textContent = 'Erreur réseau.';
-      errEl.style.display = 'block';
+      fail('Erreur réseau.');
       btn.disabled = false;
       btn.textContent = 'Initier le retrait';
     }
+  }
+
+  // ── Clés API : « Correspondants disponibles » ────────────────────────────────
+  // Opérateurs activés sur le compte (liste fournie par le serveur). Si elle est indisponible, le tableau écrit dans la page reste affiché.
+  async function loadApiCorrespondents() {
+    const note = document.getElementById('api-corr-note');
+    try {
+      const r = await apiFetch(API + '/pos/operators', { headers: { 'Authorization': 'Bearer ' + jwtToken } });
+      const d = await r.json();
+      if (!r.ok || !d.success || !Array.isArray(d.operators) || !d.operators.length) throw new Error('liste indisponible');
+      renderApiCorrespondents(d.operators);
+      note.textContent = d.source === 'fallback' ? 'Liste complète NDSGPay : l’activation sur votre compte n’a pas pu être vérifiée.'
+        : d.stale ? 'Opérateurs activés sur votre compte (dernière liste connue).' : 'Opérateurs activés sur votre compte, avec leurs limites.';
+    } catch (e) {
+      note.textContent = 'Liste générale NDSGPay (activation sur votre compte non vérifiée).';
+    }
+  }
+
+  function renderApiCorrespondents(ops) {
+    const head = document.getElementById('api-corr-head'); const body = document.getElementById('api-corr-body');
+    const cell = (text, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text; return td; };
+    const lim = (l) => (l ? (l.min != null ? fmtNum(l.min) : '—') + ' – ' + (l.max != null ? fmtNum(l.max) : '—') : 'non disponible');
+    while (head.firstChild) head.removeChild(head.firstChild);
+    const hr = document.createElement('tr');
+    ['Pays', 'Opérateur', 'Code correspondent', 'Devise', 'Collecte (min – max)', 'Payout (min – max)'].forEach((t) => { const th = document.createElement('th'); th.textContent = t; hr.appendChild(th); });
+    head.appendChild(hr);
+    while (body.firstChild) body.removeChild(body.firstChild);
+    ops.forEach((o) => {
+      const tr = document.createElement('tr');
+      tr.appendChild(cell(o.flag + ' ' + o.countryName)); tr.appendChild(cell(o.name)); tr.appendChild(cell(o.correspondent, 'td-mono')); tr.appendChild(cell(o.currency));
+      tr.appendChild(cell(lim(o.deposit))); tr.appendChild(cell(lim(o.payout)));
+      body.appendChild(tr);
+    });
   }
 
   function exportRetraitCSV() {

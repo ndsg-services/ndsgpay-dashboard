@@ -43,3 +43,17 @@ cd /tmp/jsdom && npm i jsdom jsqr                       # une fois, hors du dép
 NODE_PATH=/tmp/jsdom/node_modules node tests/qr-ui.js
 ```
 Sans `jsqr`, seul le contrôle de relecture du QR est ignoré. La provenance de la bibliothèque est dans `vendor/README.md`.
+
+---
+
+# Test du formulaire de retrait et des correspondants disponibles (`app.html`)
+
+`tests/retrait-ui.js` charge le VRAI `app.html` dans JSDOM avec un faux serveur : liste des opérateurs avec payout venue du serveur
+(RD Congo en CDF et en USD), regroupée par pays, liste de secours, devise / limites / centimes / indicatif / solde qui suivent
+l'opérateur choisi, « Tout retirer » dans la bonne devise, numéro normalisé (indicatif, zéro national), contenu de l'envoi,
+messages de refus, et le tableau « Correspondants disponibles » (Clés API) rempli depuis le serveur, avec repli sur le tableau écrit
+dans la page. Les textes venus du serveur ne sont jamais injectés comme du HTML.
+
+```
+NODE_PATH=/tmp/jsdom/node_modules node tests/retrait-ui.js
+```
