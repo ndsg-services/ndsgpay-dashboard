@@ -57,3 +57,15 @@ dans la page. Les textes venus du serveur ne sont jamais injectés comme du HTML
 ```
 NODE_PATH=/tmp/jsdom/node_modules node tests/retrait-ui.js
 ```
+
+---
+
+## Page admin : soldes marchands
+
+`tests/admin-ui.js` charge le VRAI `admin.html` dans JSDOM avec une fausse réponse de `/admin/merchants/balances` :
+une ligne par opérateur et par devise (« AIRTEL_COD · USD », jamais la clé technique `AIRTEL_COD|USD`), centimes conservés pour l'USD,
+montants entiers pour les autres devises, solde négatif en rouge. Lancer l'ancienne page (`ADMIN_HTML=<ancien fichier>`) doit échouer.
+
+```
+NODE_PATH=/tmp/jsdom/node_modules node tests/admin-ui.js
+```

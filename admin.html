@@ -1444,10 +1444,12 @@
       return;
     }
 
+    // Les devises à centimes (USD) gardent leurs 2 décimales ; les autres (XAF, XOF, CDF…) s'affichent en entiers
     const fmt = (amount, currency) => {
       if (!amount || amount === 0) return `<span style="color:var(--muted)">0 ${currency}</span>`;
       const color = amount < 0 ? 'var(--danger)' : 'inherit';
-      return `<span style="color:${color}">${new Intl.NumberFormat('fr-FR').format(Math.round(amount))} ${currency}</span>`;
+      const d = currency === 'USD' ? 2 : 0;
+      return `<span style="color:${color}">${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }).format(d ? amount : Math.round(amount))} ${currency}</span>`;
     };
 
     const rows = merchants.map(m => {
@@ -1459,7 +1461,7 @@
             <td></td>
             <td style="font-size:11px;padding:5px 16px">
               <span style="color:var(--muted)">${b.flag || ''}</span>
-              <span class="td-mono" style="font-size:10px">${corr}</span>
+              <span class="td-mono" style="font-size:10px">${b.correspondent || corr}</span>${corr.includes('|') ? `<span style="font-size:10px;color:var(--muted)"> · ${b.currency}</span>` : ''}
             </td>
             <td style="padding:5px 16px;font-size:12px">${fmt(b.depositVolume, b.currency)}</td>
             <td style="padding:5px 16px;font-size:12px">${fmt(b.payoutVolume, b.currency)}</td>
