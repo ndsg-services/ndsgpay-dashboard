@@ -43,3 +43,13 @@ cd /tmp/jsdom && npm i jsdom jsqr                       # une fois, hors du dép
 NODE_PATH=/tmp/jsdom/node_modules node tests/qr-ui.js
 ```
 Sans `jsqr`, seul le contrôle de relecture du QR est ignoré. La provenance de la bibliothèque est dans `vendor/README.md`.
+
+## Page admin : soldes marchands
+
+`tests/admin-ui.js` charge le VRAI `admin.html` dans JSDOM avec une fausse réponse de `/admin/merchants/balances` :
+une ligne par opérateur et par devise (« AIRTEL_COD · USD », jamais la clé technique `AIRTEL_COD|USD`), centimes conservés pour l'USD,
+montants entiers pour les autres devises, solde négatif en rouge. Lancer l'ancienne page (`ADMIN_HTML=<ancien fichier>`) doit échouer.
+
+```
+NODE_PATH=/tmp/jsdom/node_modules node tests/admin-ui.js
+```
