@@ -69,3 +69,17 @@ montants entiers pour les autres devises, solde négatif en rouge. Lancer l'anci
 ```
 NODE_PATH=/tmp/jsdom/node_modules node tests/admin-ui.js
 ```
+
+---
+
+# Test des schémas synoptiques (`docs.html`, `admin.html`, `synoptique.js`)
+
+`tests/schema-ui.js` charge les VRAIS fichiers dans JSDOM : schéma public de `docs.html` (11 blocs, 9 flèches, sans pawaPay ni
+détail technique, géométrie propre, cliquable), robustesse de `synoptique.js` (données hostiles affichées comme du texte),
+onglet « Schéma » de `admin.html` (chargé depuis `GET /api/admin/schema` avec la clé admin, une seule fois, refus 401/403/500/réseau,
+effacé à la déconnexion) et absence de tout texte du schéma interne dans un fichier public.
+
+```
+NODE_PATH=/tmp/jsdom/node_modules node tests/schema-ui.js
+```
+Le contenu du schéma interne vit dans `ndsgpay-backend/src/lib/schema-internal.js` (jamais dans ce dépôt).

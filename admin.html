@@ -166,6 +166,7 @@
       <button class="tab-btn" id="tab-reconcile" onclick="switchTab('reconcile')">🔄 Réconciliation</button>
       <button class="tab-btn" id="tab-webhooks" onclick="switchTab('webhooks')">🔔 Webhooks</button>
       <button class="tab-btn" id="tab-audit" onclick="switchTab('audit')">🔍 Audit</button>
+      <button class="tab-btn" id="tab-schema" onclick="switchTab('schema')">🗺️ Schéma</button>
     </div>
 
     <!-- MARCHANDS -->
@@ -239,6 +240,12 @@
       </div>
     </div>
 
+    <!-- PANEL SCHEMA — contenu chargé depuis /admin/schema avec la clé admin : rien de confidentiel n'est écrit dans cette page -->
+    <div id="panel-schema" style="display:none">
+      <div id="schema-status" style="font-size:13px;color:var(--muted);padding:6px 2px 14px"></div>
+      <div id="schema-mount"></div>
+    </div>
+
   </div>
 </div>
 
@@ -283,6 +290,7 @@
   </div>
 </div>
 
+<script src="synoptique.js"></script>
 <script>
   const API = 'https://ndsgpay-backend.vercel.app/api';
   const ADMIN_SESSION_TTL = 8 * 60 * 60 * 1000; // 8 heures en ms
@@ -364,7 +372,37 @@
     await loadMerchants();
   }
 
+  // Schéma synoptique interne : récupéré avec la clé admin, gardé en mémoire seulement, effacé à la déconnexion
+  let schemaLoaded = false;
+  async function loadSchema() {
+    if (schemaLoaded) return;
+    const status = document.getElementById('schema-status');
+    const mount = document.getElementById('schema-mount');
+    status.textContent = 'Chargement du schéma…';
+    try {
+      const res = await fetch(`${API}/admin/schema`, { headers: { 'x-admin-key': adminKey } });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.schema) {
+        status.textContent = res.status === 401 || res.status === 403 ? 'Accès refusé : reconnectez-vous avec la clé admin.' : 'Schéma indisponible pour le moment.';
+        return;
+      }
+      status.textContent = '';
+      NDSGSyn.mount(mount, data.schema);
+      schemaLoaded = true;
+    } catch (err) {
+      status.textContent = 'Erreur de connexion : le schéma n\'a pas pu être chargé.';
+    }
+  }
+  function clearSchema() {
+    schemaLoaded = false;
+    const mount = document.getElementById('schema-mount');
+    if (mount) mount.innerHTML = '';
+    const status = document.getElementById('schema-status');
+    if (status) status.textContent = '';
+  }
+
   function doLogout() {
+    clearSchema();
     adminKey = null;
     sessionStorage.removeItem('ndsgpay_admin_key');
     sessionStorage.removeItem('ndsgpay_admin_login_at');
@@ -400,6 +438,7 @@
     document.getElementById('panel-reconcile').style.display   = tab === 'reconcile'   ? 'block' : 'none';
     document.getElementById('panel-audit').style.display       = tab === 'audit'       ? 'block' : 'none';
     document.getElementById('panel-webhooks').style.display    = tab === 'webhooks'    ? 'block' : 'none';
+    document.getElementById('panel-schema').style.display      = tab === 'schema'      ? 'block' : 'none';
     document.getElementById('tab-merchants').classList.toggle('active',    tab === 'merchants');
     document.getElementById('tab-transactions').classList.toggle('active', tab === 'transactions');
     document.getElementById('tab-withdrawals').classList.toggle('active',  tab === 'withdrawals');
@@ -408,9 +447,11 @@
     document.getElementById('tab-reconcile').classList.toggle('active',   tab === 'reconcile');
     document.getElementById('tab-audit').classList.toggle('active',       tab === 'audit');
     document.getElementById('tab-webhooks').classList.toggle('active',    tab === 'webhooks');
+    document.getElementById('tab-schema').classList.toggle('active',      tab === 'schema');
     if (tab === 'reconcile') loadReconciliationLogs();
     if (tab === 'audit') loadAuditLogs();
     if (tab === 'webhooks') loadWebhookDeliveries(1);
+    if (tab === 'schema') loadSchema();
     if (tab === 'transactions') {
       const s = document.getElementById('tx-search');
       if (s) s.value = '';
